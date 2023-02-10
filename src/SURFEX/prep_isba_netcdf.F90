@@ -1,6 +1,6 @@
-!SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
+!SFX_LIC Copyright 2012-2019 CNRS, Meteo-France and Universite Paul Sabatier
 !SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
-!SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
+!SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt
 !SFX_LIC for details. version 1.
 !     #########
 SUBROUTINE PREP_ISBA_NETCDF (DTCO, U, HPROGRAM,HSURF,HFILE,KLUOUT,PFIELD)
@@ -26,10 +26,14 @@ SUBROUTINE PREP_ISBA_NETCDF (DTCO, U, HPROGRAM,HSURF,HFILE,KLUOUT,PFIELD)
 !!    -------------
 !!      Original    04/2012
 !!      J.Escobar   11/2013  Add USE MODI_GET_TYPE_DIM_n
+!  P. Wautelet 19/09/2019: correct support of 64bit integers (MNH_INT=8)
 !!------------------------------------------------------------------
 !
 !
 !
+USE GRIB_API, ONLY : kindOfInt
+!
+use modd_netcdf_sfx, only: IDCDF_KIND
 USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 !
@@ -50,7 +54,6 @@ USE PARKIND1  ,ONLY : JPRB
 USE NETCDF
 !
 IMPLICIT NONE
-
 !
 !*      0.1    declarations of arguments
 !
@@ -73,14 +76,14 @@ REAL, DIMENSION(:), ALLOCATABLE :: ZFIELD, ZFIELD0   ! field read
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
 INTEGER :: JI, ICPT
-INTEGER::IERROR !error status
+INTEGER(kind=kindOfInt)::IERROR !error status
 INTEGER::JJ,JK,JLOOP ! loop counters
 INTEGER::INLAYERS ! vertical dimension length
 INTEGER::IL ! nature dimension length
-INTEGER::ID_FILE,ID_VAR ! Netcdf IDs for file and variable
-INTEGER::INVARDIMS !number of dimensions of netcdf input variable
-INTEGER,DIMENSION(:),ALLOCATABLE::IVARDIMSID
-INTEGER::ILENDIM,ILENDIM1,ILENDIM2
+INTEGER(kind=IDCDF_KIND)::ID_FILE,ID_VAR ! Netcdf IDs for file and variable
+INTEGER(kind=IDCDF_KIND)::INVARDIMS !number of dimensions of netcdf input variable
+INTEGER(kind=IDCDF_KIND),DIMENSION(:),ALLOCATABLE::IVARDIMSID
+INTEGER(kind=IDCDF_KIND)::ILENDIM,ILENDIM1,ILENDIM2
 
 SELECT CASE (TRIM(HSURF))
   CASE ('TG','WG','WGI')
@@ -142,9 +145,21 @@ IF (NRANK==NPIO) THEN
   IF(ILENDIM/=U%NDIM_NATURE) CALL ABOR1_SFX('PREP_ISBA_NETCDF: incorrect number of points '// &
                                   'in netcdf file for variable '//TRIM(HSURF))
   !
-  ! Read 1D variable
-  IERROR=NF90_GET_VAR(ID_FILE,ID_VAR,ZFIELD)
-   CALL HANDLE_ERR_CDF(IERROR,"can't read variable "//TRIM(HSURF))
+  SELECT CASE (INVARDIMS)
+    CASE (1)
+      ! Read 1D variable
+      IERROR=NF90_GET_VAR(ID_FILE,ID_VAR,ZFIELD)
+       CALL HANDLE_ERR_CDF(IERROR,"can't read variable "//TRIM(HSURF))
+    CASE (2)
+      ! Read 2D variable
+      IERROR=NF90_GET_VAR(ID_FILE,ID_VAR,ZFIELD,count=(/ILENDIM1,ILENDIM2/))
+       CALL HANDLE_ERR_CDF(IERROR,"can't read variable "//TRIM(HSURF))
+  
+    CASE DEFAULT
+      CALL ABOR1_SFX('PREP_ISBA_NETCDF: incorrect number of dimensions for variable (read step) '//TRIM(HSURF))
+  
+  END SELECT  
+
   !
   ! Close netcdf file
   IERROR=NF90_CLOSE(ID_FILE)

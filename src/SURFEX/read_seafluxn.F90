@@ -35,7 +35,9 @@
 !!      Original    01/2003 
 !!      Modified    02/2008 Add oceanic variables initialisation
 !!      S. Belamari 04/2014 Suppress LMERCATOR
-!!      R. Séférian 01/2015 introduce new ocean surface albedo 
+!!      R. Séférian 01/2015 introduce new ocean surface albedo
+!!      Modified    03/2014 : M.N. Bouin  ! possibility of wave parameters
+!!                                        ! from external source
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
@@ -49,7 +51,7 @@ USE MODD_SFX_GRID_n, ONLY : GRID_t
 USE MODD_SEAFLUX_n, ONLY : SEAFLUX_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 !
-USE MODD_SURF_PAR,       ONLY : XUNDEF
+USE MODD_SURF_PAR,       ONLY : XUNDEF, LEN_HREC
 !
 USE MODI_READ_SURF
 USE MODI_INTERPOL_SST_MTH
@@ -77,14 +79,14 @@ INTEGER,           INTENT(IN)  :: KLUOUT
 !*       0.2   Declarations of local variables
 !              -------------------------------
 !
-INTEGER           :: JMTH, INMTH
-CHARACTER(LEN=2 ) :: YMTH
+INTEGER           :: JMTH, INMTH, JDAY, INDAY
+CHARACTER(LEN=2 ) :: YMTH, YDAY
 !
 INTEGER           :: ILU          ! 1D physical dimension
 !
 INTEGER           :: IRESP          ! Error code after redding
 !
-CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 !
 INTEGER           :: IVERSION       ! surface version
 !
@@ -119,6 +121,27 @@ IF(S%LINTERPOL_SST)THEN
   ENDDO
 !
   CALL INTERPOL_SST_MTH(S,'T')
+!
+ELSE IF (TRIM(S%CINTERPOL_SST)=='READAY') THEN
+!
+!  All days of current month
+   SELECT CASE (S%TTIME%TDATE%MONTH)
+   CASE(4,6,9,11)
+     INDAY=30
+   CASE(1,3,5,7:8,10,12)
+     INDAY=31
+   CASE(2)
+    INDAY=29
+   END SELECT
+       
+   ALLOCATE(S%XSST_MTH(ILU,INDAY))
+!
+   DO JDAY=1,INDAY
+     WRITE(YDAY,'(I2)') JDAY
+     YRECFM='N_SST_DD'//ADJUSTL(YDAY(:LEN_TRIM(YDAY)))
+     CALL READ_SURF(HPROGRAM,YRECFM,S%XSST_MTH(:,JDAY),IRESP)
+   ENDDO
+   S%XSST = S%XSST_MTH(:,S%TTIME%TDATE%DAY)
 !
 ELSE
 ! 
@@ -182,6 +205,31 @@ IF(S%LINTERPOL_SSS)THEN
    !
    CALL INTERPOL_SST_MTH(S,'S')
    !
+ELSE IF (TRIM(S%CINTERPOL_SSS)=='READAY') THEN
+!
+!  All days of current month
+   SELECT CASE (S%TTIME%TDATE%MONTH)
+   CASE(4,6,9,11)
+     INDAY=30
+   CASE(1,3,5,7:8,10,12)
+     INDAY=31
+   CASE(2)
+    INDAY=29
+   END SELECT
+
+   ALLOCATE(S%XSSS_MTH(ILU,INDAY))
+!
+   DO JDAY=1,INDAY
+     WRITE(YDAY,'(I2)') JDAY
+     YRECFM='N_SSS_DD'//ADJUSTL(YDAY(:LEN_TRIM(YDAY)))
+     CALL READ_SURF(HPROGRAM,YRECFM,S%XSSS_MTH(:,JDAY),IRESP)
+   ENDDO
+   S%XSSS = S%XSSS_MTH(:,S%TTIME%TDATE%DAY)
+!
+   IF(S%LHANDLE_SIC)THEN
+     CALL CHECK_SEA(YRECFM,S%XSSS(:))
+   ENDIF
+!
 ELSEIF (IVERSION>=8) THEN
    ! 
    ALLOCATE(S%XSSS_MTH(0,0))
@@ -196,23 +244,38 @@ ENDIF
 !
 !* ocean surface albedo (direct and diffuse fraction)
 !
-ALLOCATE(S%XDIR_ALB (ILU))
-ALLOCATE(S%XSCA_ALB (ILU))
+ALLOCATE(S%XDIR_ALB_SEA(ILU))
+ALLOCATE(S%XSCA_ALB_SEA(ILU))
 !
 IF(S%CSEA_ALB=='RS14')THEN
 !
   YRECFM='OSA_DIR'
-  CALL READ_SURF(HPROGRAM,YRECFM,S%XDIR_ALB(:),IRESP)
+  CALL READ_SURF(HPROGRAM,YRECFM,S%XDIR_ALB_SEA(:),IRESP)
 !
   YRECFM='OSA_SCA'
-  CALL READ_SURF(HPROGRAM,YRECFM,S%XSCA_ALB(:),IRESP)
+  CALL READ_SURF(HPROGRAM,YRECFM,S%XSCA_ALB_SEA(:),IRESP)
 !
 ELSE
 !
-  S%XDIR_ALB(:)=0.065
-  S%XSCA_ALB(:)=0.065
+  S%XDIR_ALB_SEA(:)=0.065
+  S%XSCA_ALB_SEA(:)=0.065
 !
 ENDIF
+!
+!* Peak frequency and significant wave height
+!
+ALLOCATE(S%XHS(ILU))
+ALLOCATE(S%XTP(ILU))
+!
+IF (.NOT.S%LWAVEWIND) THEN
+  YRECFM='HS'
+  CALL READ_SURF(HPROGRAM,YRECFM,S%XHS(:),IRESP)
+  YRECFM='TP'
+  CALL READ_SURF(HPROGRAM,YRECFM,S%XTP(:),IRESP)
+ELSE
+  S%XHS(:)=XUNDEF
+  S%XTP(:)=XUNDEF
+END IF
 !
 IF (LHOOK) CALL DR_HOOK('READ_SEAFLUX_N',1,ZHOOK_HANDLE)
 !
@@ -225,7 +288,7 @@ SUBROUTINE CHECK_SEA(HFIELD,PFIELD)
 !
 IMPLICIT NONE
 !
-CHARACTER(LEN=12),  INTENT(IN) :: HFIELD
+CHARACTER(LEN=LEN_HREC),  INTENT(IN) :: HFIELD
 REAL, DIMENSION(:), INTENT(IN) :: PFIELD
 !
 REAL            :: ZMAX,ZMIN

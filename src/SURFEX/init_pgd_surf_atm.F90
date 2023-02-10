@@ -4,7 +4,7 @@
 !SFX_LIC for details. version 1.
 !     #################################################################################
 SUBROUTINE INIT_PGD_SURF_ATM (YSC, HPROGRAM,HINIT,HATMFILE,HATMFILETYPE, &
-                               KYEAR, KMONTH, KDAY, PTIME            )  
+                               KYEAR, KMONTH, KDAY, PTIME                )  
 !     #################################################################################
 !
 !!****  *INIT_PGD_SURF_ATM* - Call surface initialization for PGD fields only
@@ -27,6 +27,7 @@ SUBROUTINE INIT_PGD_SURF_ATM (YSC, HPROGRAM,HINIT,HATMFILE,HATMFILETYPE, &
 !!    -------------
 !!      Original    01/2004
 !!      B. Decharme  04/2013 new coupling variables
+!!      R.Séférian  08/2016  new landuse change implementation
 !!------------------------------------------------------------------
 !
 !
@@ -34,6 +35,7 @@ SUBROUTINE INIT_PGD_SURF_ATM (YSC, HPROGRAM,HINIT,HATMFILE,HATMFILETYPE, &
 USE MODD_SURFEX_n, ONLY : SURFEX_t
 !
 USE MODD_TYPE_DATE_SURF, ONLY : DATE
+USE MODD_SURF_ATM_TURB_n, ONLY : SURF_ATM_TURB_t
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -59,8 +61,10 @@ REAL,              INTENT(IN)   :: PTIME       ! time
 !
 !*      0.2    declarations of local variables
 !
-TYPE(DATE) :: TDATE_END
- CHARACTER(LEN=6), DIMENSION(0)  :: YSV       ! name of all scalar variables
+TYPE(DATE)            :: TDATE_END
+TYPE(SURF_ATM_TURB_t) :: AT         ! atmospheric turbulence parameters
+!
+CHARACTER(LEN=6), DIMENSION(0)  :: YSV       ! name of all scalar variables
 REAL,             DIMENSION(0)  :: ZCO2      ! CO2 concentration (kg/m3)
 REAL,             DIMENSION(0)  :: ZRHOA     ! air density (kg/m3)
 REAL,             DIMENSION(0)  :: ZZENITH   ! solar zenithal angle
@@ -71,6 +75,7 @@ REAL,             DIMENSION(0,1):: ZSCA_ALB  ! diffuse albedo for each band
 REAL,             DIMENSION(0)  :: ZEMIS     ! emissivity
 REAL,             DIMENSION(0)  :: ZTSRAD    ! radiative temperature
 REAL,             DIMENSION(0)  :: ZTSURF    ! radiative temperature
+!
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !-------------------------------------------------------------------------------------
 !
@@ -82,11 +87,11 @@ TDATE_END%YEAR = KYEAR
 TDATE_END%MONTH = KMONTH
 TDATE_END%DAY = KDAY
 !
- CALL INIT_SURF_ATM_n(YSC, HPROGRAM,HINIT,.FALSE.,               &
-                      0,0,1,YSV,ZCO2,ZRHOA,                      &
+ CALL INIT_SURF_ATM_n(YSC, HPROGRAM,HINIT,                       &
+                      0,0,1,YSV,ZCO2,ZRHOA,      &
                       ZZENITH,ZAZIM,ZSW_BANDS,ZDIR_ALB,ZSCA_ALB, &
                       ZEMIS,ZTSRAD,ZTSURF,                       &
-                      KYEAR, KMONTH, KDAY, PTIME, TDATE_END,     &
+                      KYEAR, KMONTH, KDAY, PTIME, TDATE_END,AT,  &
                       HATMFILE,HATMFILETYPE, 'OK'                )  
 !
 IF (LHOOK) CALL DR_HOOK('INIT_PGD_SURF_ATM',1,ZHOOK_HANDLE)

@@ -43,7 +43,7 @@ REAL,    PARAMETER :: XSTEPK = 0.05   ! discretization step of the saturation
                                       ! index KAPPA
 INTEGER, PARAMETER :: NDIM = 20       ! dimension of the XCONN array third 
                                       ! index 
-INTEGER, PARAMETER :: JPCAT = 10      ! number max of catchments
+INTEGER, PARAMETER :: JPCAT = 15      ! number max of catchments
 !
 INTEGER :: NUNIT = 19
 !

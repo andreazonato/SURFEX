@@ -31,6 +31,7 @@
 !*       0.   DECLARATIONS
 !             ------------
 !
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 IMPLICIT NONE
 !
@@ -38,11 +39,11 @@ IMPLICIT NONE
 LOGICAL    :: LSELECT = .FALSE.
               ! activates output selection from namelist
 !
- CHARACTER(LEN=12), DIMENSION(200)    :: CNAME_SELECT
+ CHARACTER(LEN=LEN_HREC), DIMENSION(200)    :: CNAME_SELECT
               ! name of output fields in namelist
 !
 LOGICAL    :: LSELECT_USER
- CHARACTER(LEN=12), DIMENSION(:), POINTER    :: CNAME_USER
+ CHARACTER(LEN=LEN_HREC), DIMENSION(:), POINTER    :: CNAME_USER
 !
 !-----------------------------------------------------------------------------------------------------
 !

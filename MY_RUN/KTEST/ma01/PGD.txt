@@ -1,0 +1,1311 @@
+ &FULL   VERSION     
+(-)                                               
+           9
+ &FULL   BUG         
+(-)                                               
+           0
+ &FULL   STORAGETYPE 
+(-)                                               
+PGD                                     
+ &FULL   SPLIT_PATCH 
+(-)                                               
+ T
+ &FULL   SEA         
+(-)                                               
+SEAFLX                                  
+ &FULL   WATER       
+(-)                                               
+WATFLX                                  
+ &FULL   NATURE      
+(-)                                               
+ISBA                                    
+ &FULL   TOWN        
+(-)                                               
+TEB                                     
+ &FULL   DIM_FULL    
+(-)                                               
+           1
+ &FULL   DIM_SEA     
+(-)                                               
+           0
+ &FULL   DIM_NATURE  
+(-)                                               
+           1
+ &FULL   DIM_WATER   
+(-)                                               
+           0
+ &FULL   DIM_TOWN    
+(-)                                               
+           1
+ &FULL   ECOCLIMAP   
+(-)                                               
+ F
+ &FULL   ECOSG       
+(-)                                               
+ F
+ &FULL   WATER_TO_NAT
+(-)                                               
+ F
+ &FULL   TOWN_TO_ROCK
+(-)                                               
+ F
+ &FULL   TOWN_TO_COVE
+(-)                                               
+ F
+ &FULL   REPLACE_COVE
+(-)                                               
+  1000000000
+ &FULL   GARDEN      
+(-)                                               
+ F
+ &FULL   DATA_IRRIG  
+FLAG TO READ USER IRRIGATION DATA FOR ECOCLIMAP2  
+ F
+ &FULL   LCLIM_LAI   
+FLAG TO USE CLIMATOLOGICAL LAI                    
+ T
+ &FULL   GRID_TYPE   
+GRID TYPE                                         
+LONLAT REG                              
+ &FULL   LONMIN      
+                                                  
+   5.3670000000000000     
+ &FULL   LONMAX      
+                                                  
+   5.3670000000000000     
+ &FULL   LATMIN      
+                                                  
+   43.283000000000001     
+ &FULL   LATMAX      
+                                                  
+   43.283000000000001     
+ &FULL   NLON        
+                                                  
+           1
+ &FULL   NLAT        
+                                                  
+           1
+ &FULL   REG_LON     
+                                                  
+      0.53670000000000000D+01
+ &FULL   REG_LAT     
+                                                  
+      0.43283000000000001D+02
+ &FULL   FRAC_SEA    
+(-)                                               
+      0.00000000000000000D+00
+ &FULL   FRAC_NATURE 
+(-)                                               
+      0.13600000000000001D+00
+ &FULL   FRAC_WATER  
+(-)                                               
+      0.00000000000000000D+00
+ &FULL   FRAC_TOWN   
+(-)                                               
+      0.86399999999999999D+00
+ &FULL   COVER_LIST  
+(LOGICAL LIST)                                    
+ F F F T F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F
+ &FULL   COVER004    
+X_Y_COVER004                                      
+      0.13600000000000001D+00
+ &FULL   COVER151    
+X_Y_COVER151                                      
+      0.86399999999999999D+00
+ &FULL   ZS          
+X_Y_ZS (M)                                        
+      0.00000000000000000D+00
+ &FULL   AVG_ZS      
+X_Y_AVG_ZS (M)                                    
+      0.00000000000000000D+00
+ &FULL   SIL_ZS      
+X_Y_SIL_ZS (M)                                    
+      0.00000000000000000D+00
+ &FULL   SSO_STDEV   
+X_Y_SSO_STDEV (M)                                 
+      0.00000000000000000D+00
+ &FULL   MIN_ZS      
+X_Y_MIN_ZS (M)                                    
+      0.00000000000000000D+00
+ &FULL   MAX_ZS      
+X_Y_MAX_ZS (M)                                    
+      0.00000000000000000D+00
+ &FULL   SSO_ANIS    
+X_Y_SSO_ANIS (-)                                  
+      0.00000000000000000D+00
+ &FULL   SSO_DIR     
+X_Y_SSO_DIR (DEG)                                 
+      0.00000000000000000D+00
+ &FULL   SSO_SLOPE   
+X_Y_SSO_SLOPE (-)                                 
+      0.00000000000000000D+00
+ &FULL   HO2IP       
+X_Y_HO2IP (M)                                     
+      0.00000000000000000D+00
+ &FULL   HO2JP       
+X_Y_HO2JP (M)                                     
+      0.00000000000000000D+00
+ &FULL   HO2IM       
+X_Y_HO2IM (M)                                     
+      0.00000000000000000D+00
+ &FULL   HO2JM       
+X_Y_HO2JM (M)                                     
+      0.00000000000000000D+00
+ &FULL   AOSIP       
+X_Y_AOSIP (-)                                     
+      0.00000000000000000D+00
+ &FULL   AOSJP       
+X_Y_AOSJP (-)                                     
+      0.00000000000000000D+00
+ &FULL   AOSIM       
+X_Y_AOSIM (-)                                     
+      0.00000000000000000D+00
+ &FULL   AOSJM       
+X_Y_AOSJM (-)                                     
+      0.00000000000000000D+00
+ &FULL   LORORAD     
+(-)                                               
+ F
+ &FULL   DUMMY_GR_NBR
+                                                  
+           0
+ &FULL   CH_EMIS     
+CH_EMIS                                           
+ F
+ &FULL   CH_BIOEMIS  
+CH_BIOEMIS                                        
+ F
+ &NATURE ISBA        
+ISBA                                              
+3-L                                     
+ &NATURE PEDOTF      
+PEDOTF                                            
+CH78                                    
+ &NATURE PHOTO       
+PHOTO                                             
+NON                                     
+ &NATURE TR_ML       
+TR_ML                                             
+ F
+ &NATURE ALBEDO      
+ALBEDO                                            
+DRY                                     
+ &NATURE LULCC       
+LULCC                                             
+ F
+ &NATURE RM_PATCH    
+RM_PATCH                                          
+   0.0000000000000000     
+ &NATURE GROUND_LAYER
+GROUND_LAYER                                      
+           3
+ &NATURE NBIOMASS    
+NBIOMASS                                          
+           0
+ &NATURE PATCH_NUMBER
+PATCH_NUMBER                                      
+           1
+ &NATURE NPATCH_NAM01
+NPATCH_NAM01                                      
+ALL VEGEGTYPE TOGETHER                  
+ &NATURE NPATCH_VEG01
+NPATCH_VEG01                                      
+TTTTTTTTTTTTTTTTTTT                     
+ &NATURE MEB_PATCH   
+(LOGICAL LIST)                                    
+ F
+ &NATURE CLAY        
+X_Y_CLAY                                          
+      0.33000000000000002D+00
+ &NATURE SAND        
+X_Y_SAND                                          
+      0.33000000000000002D+00
+ &NATURE SOCP        
+                                                  
+ F
+ &NATURE PERMAFROST  
+                                                  
+ F
+ &NATURE NO          
+                                                  
+ F
+ &NATURE RUNOFFB     
+X_Y_RUNOFFB                                       
+      0.50000000000000000D+00
+ &NATURE WDRAIN      
+X_Y_WDRAIN                                        
+      0.00000000000000000D+00
+ &NATURE CTI         
+                                                  
+ F
+ &NATURE L_VEGTYPE   
+L_VEGTYPE                                         
+ T
+ &NATURE D_VEGTY_P1  
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P2  
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P3  
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P4  
+X_Y_DATA_ISBATYPE                                 
+      0.10000000000000000D+01
+ &NATURE D_VEGTY_P5  
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P6  
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P7  
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P8  
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P9  
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P10 
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P11 
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P12 
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P13 
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P14 
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P15 
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P16 
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P17 
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P18 
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE D_VEGTY_P19 
+X_Y_DATA_ISBATYPE                                 
+      0.00000000000000000D+00
+ &NATURE NDATA_TIME  
+(-)                                               
+          12
+ &NATURE L_VEG       
+L_VEG                                             
+ T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F
+ &NATURE D_VEG_T01V01
+X_Y_D_VEG                                         
+      0.00000000000000000D+00
+ &NATURE D_VEG_T02V01
+X_Y_D_VEG                                         
+      0.00000000000000000D+00
+ &NATURE D_VEG_T03V01
+X_Y_D_VEG                                         
+      0.00000000000000000D+00
+ &NATURE D_VEG_T04V01
+X_Y_D_VEG                                         
+      0.00000000000000000D+00
+ &NATURE D_VEG_T05V01
+X_Y_D_VEG                                         
+      0.50000000000000000D+00
+ &NATURE D_VEG_T06V01
+X_Y_D_VEG                                         
+      0.90000000000000002D+00
+ &NATURE D_VEG_T07V01
+X_Y_D_VEG                                         
+      0.90000000000000002D+00
+ &NATURE D_VEG_T08V01
+X_Y_D_VEG                                         
+      0.90000000000000002D+00
+ &NATURE D_VEG_T09V01
+X_Y_D_VEG                                         
+      0.90000000000000002D+00
+ &NATURE D_VEG_T10V01
+X_Y_D_VEG                                         
+      0.00000000000000000D+00
+ &NATURE D_VEG_T11V01
+X_Y_D_VEG                                         
+      0.00000000000000000D+00
+ &NATURE D_VEG_T12V01
+X_Y_D_VEG                                         
+      0.00000000000000000D+00
+ &NATURE L_LAI       
+L_LAI                                             
+ T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F
+ &NATURE D_LAI_T01V01
+X_Y_D_LAI                                         
+      0.00000000000000000D+00
+ &NATURE D_LAI_T02V01
+X_Y_D_LAI                                         
+      0.00000000000000000D+00
+ &NATURE D_LAI_T03V01
+X_Y_D_LAI                                         
+      0.00000000000000000D+00
+ &NATURE D_LAI_T04V01
+X_Y_D_LAI                                         
+      0.00000000000000000D+00
+ &NATURE D_LAI_T05V01
+X_Y_D_LAI                                         
+      0.10000000000000000D+01
+ &NATURE D_LAI_T06V01
+X_Y_D_LAI                                         
+      0.30000000000000000D+01
+ &NATURE D_LAI_T07V01
+X_Y_D_LAI                                         
+      0.30000000000000000D+01
+ &NATURE D_LAI_T08V01
+X_Y_D_LAI                                         
+      0.30000000000000000D+01
+ &NATURE D_LAI_T09V01
+X_Y_D_LAI                                         
+      0.30000000000000000D+01
+ &NATURE D_LAI_T10V01
+X_Y_D_LAI                                         
+      0.00000000000000000D+00
+ &NATURE D_LAI_T11V01
+X_Y_D_LAI                                         
+      0.00000000000000000D+00
+ &NATURE D_LAI_T12V01
+X_Y_D_LAI                                         
+      0.00000000000000000D+00
+ &NATURE L_Z0        
+L_Z0                                              
+ T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F
+ &NATURE D_Z0_T01V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T02V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T03V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T04V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T05V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T06V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T07V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T08V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T09V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T10V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T11V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE D_Z0_T12V01 
+X_Y_D_Z0                                          
+      0.20000000000000000D+01
+ &NATURE L_EMIS      
+L_EMIS                                            
+ T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F
+ &NATURE D_EMI_T01V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T02V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T03V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T04V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T05V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T06V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T07V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T08V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T09V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T10V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T11V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE D_EMI_T12V01
+X_Y_D_EMIS                                        
+      0.96999999999999997D+00
+ &NATURE L_H_VEG     
+L_H_VEG                                           
+ F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_GNDLITTER 
+L_GNDLITTER                                       
+ F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_Z0LITTER  
+L_Z0LITTER                                        
+ F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_ALBNIR_VEG
+L_ALBNIR_VEG                                      
+ T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F
+ &NATURE D_ANV_T01V01
+X_Y_D_ANV_T01V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T02V01
+X_Y_D_ANV_T02V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T03V01
+X_Y_D_ANV_T03V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T04V01
+X_Y_D_ANV_T04V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T05V01
+X_Y_D_ANV_T05V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T06V01
+X_Y_D_ANV_T06V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T07V01
+X_Y_D_ANV_T07V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T08V01
+X_Y_D_ANV_T08V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T09V01
+X_Y_D_ANV_T09V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T10V01
+X_Y_D_ANV_T10V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T11V01
+X_Y_D_ANV_T11V01                                  
+      0.25000000000000000D+00
+ &NATURE D_ANV_T12V01
+X_Y_D_ANV_T12V01                                  
+      0.25000000000000000D+00
+ &NATURE L_ALBVIS_VEG
+L_ALBVIS_VEG                                      
+ T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F
+ &NATURE D_AVV_T01V01
+X_Y_D_AVV_T01V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T02V01
+X_Y_D_AVV_T02V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T03V01
+X_Y_D_AVV_T03V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T04V01
+X_Y_D_AVV_T04V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T05V01
+X_Y_D_AVV_T05V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T06V01
+X_Y_D_AVV_T06V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T07V01
+X_Y_D_AVV_T07V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T08V01
+X_Y_D_AVV_T08V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T09V01
+X_Y_D_AVV_T09V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T10V01
+X_Y_D_AVV_T10V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T11V01
+X_Y_D_AVV_T11V01                                  
+      0.50000000000000003D-01
+ &NATURE D_AVV_T12V01
+X_Y_D_AVV_T12V01                                  
+      0.50000000000000003D-01
+ &NATURE L_ALBUV_VEG 
+L_ALBUV_VEG                                       
+ T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F
+ &NATURE D_AUV_T01V01
+X_Y_D_AUV_T01V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T02V01
+X_Y_D_AUV_T02V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T03V01
+X_Y_D_AUV_T03V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T04V01
+X_Y_D_AUV_T04V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T05V01
+X_Y_D_AUV_T05V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T06V01
+X_Y_D_AUV_T06V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T07V01
+X_Y_D_AUV_T07V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T08V01
+X_Y_D_AUV_T08V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T09V01
+X_Y_D_AUV_T09V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T10V01
+X_Y_D_AUV_T10V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T11V01
+X_Y_D_AUV_T11V01                                  
+      0.52499999999999998D-01
+ &NATURE D_AUV_T12V01
+X_Y_D_AUV_T12V01                                  
+      0.52499999999999998D-01
+ &NATURE L_ALBNIR_SOI
+L_ALBNIR_SOI                                      
+ T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F
+ &NATURE D_ANS_T01V01
+X_Y_D_ANS_T01V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T02V01
+X_Y_D_ANS_T02V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T03V01
+X_Y_D_ANS_T03V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T04V01
+X_Y_D_ANS_T04V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T05V01
+X_Y_D_ANS_T05V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T06V01
+X_Y_D_ANS_T06V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T07V01
+X_Y_D_ANS_T07V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T08V01
+X_Y_D_ANS_T08V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T09V01
+X_Y_D_ANS_T09V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T10V01
+X_Y_D_ANS_T10V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T11V01
+X_Y_D_ANS_T11V01                                  
+      0.29999999999999999D+00
+ &NATURE D_ANS_T12V01
+X_Y_D_ANS_T12V01                                  
+      0.29999999999999999D+00
+ &NATURE L_ALBVIS_SOI
+L_ALBVIS_SOI                                      
+ T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F
+ &NATURE D_AVS_T01V01
+X_Y_D_AVS_T01V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T02V01
+X_Y_D_AVS_T02V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T03V01
+X_Y_D_AVS_T03V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T04V01
+X_Y_D_AVS_T04V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T05V01
+X_Y_D_AVS_T05V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T06V01
+X_Y_D_AVS_T06V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T07V01
+X_Y_D_AVS_T07V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T08V01
+X_Y_D_AVS_T08V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T09V01
+X_Y_D_AVS_T09V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T10V01
+X_Y_D_AVS_T10V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T11V01
+X_Y_D_AVS_T11V01                                  
+      0.10000000000000001D+00
+ &NATURE D_AVS_T12V01
+X_Y_D_AVS_T12V01                                  
+      0.10000000000000001D+00
+ &NATURE L_ALBUV_SOI 
+L_ALBUV_SOI                                       
+ T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F T F F F F F F F F F F F F F F F F F F
+ &NATURE D_AUS_T01V01
+X_Y_D_AUS_T01V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T02V01
+X_Y_D_AUS_T02V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T03V01
+X_Y_D_AUS_T03V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T04V01
+X_Y_D_AUS_T04V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T05V01
+X_Y_D_AUS_T05V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T06V01
+X_Y_D_AUS_T06V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T07V01
+X_Y_D_AUS_T07V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T08V01
+X_Y_D_AUS_T08V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T09V01
+X_Y_D_AUS_T09V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T10V01
+X_Y_D_AUS_T10V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T11V01
+X_Y_D_AUS_T11V01                                  
+      0.59999999999999998D-01
+ &NATURE D_AUS_T12V01
+X_Y_D_AUS_T12V01                                  
+      0.59999999999999998D-01
+ &NATURE L_RSMIN     
+L_RSMIN                                           
+ T F F F F F F F F F F F F F F F F F F F
+ &NATURE D_RSMIN_V01 
+X_Y_D_RSMIN                                       
+      0.15000000000000000D+03
+ &NATURE L_GAMMA     
+L_GAMMA                                           
+ T F F F F F F F F F F F F F F F F F F F
+ &NATURE D_GAMMA_V01 
+X_Y_D_GAMMA                                       
+      0.40000000000000001D-01
+ &NATURE L_WRMAX_CF  
+L_WRMAX_CF                                        
+ T F F F F F F F F F F F F F F F F F F F
+ &NATURE D_WRMAX_V01 
+X_Y_D_WRMAX_CF                                    
+      0.20000000000000001D+00
+ &NATURE L_RGL       
+L_RGL                                             
+ T F F F F F F F F F F F F F F F F F F F
+ &NATURE D_RGL_V01   
+X_Y_D_RGL                                         
+      0.30000000000000000D+02
+ &NATURE L_CV        
+L_CV                                              
+ T F F F F F F F F F F F F F F F F F F F
+ &NATURE D_CV_V01    
+X_Y_D_CV                                          
+      0.10000000000000001D-04
+ &NATURE L_Z0_O_Z0H  
+L_Z0_O_Z0H                                        
+ T F F F F F F F F F F F F F F F F F F F
+ &NATURE D_Z0H_V01   
+X_Y_D_Z0_O_Z0H                                    
+      0.10000000000000000D+02
+ &NATURE L_DG        
+L_DG                                              
+ T F F F F F F F F F F F F F F F F F F F
+ &NATURE D_DG_L01V01 
+X_Y_D_DG_L01V01                                   
+      0.10000000000000000D-01
+ &NATURE D_DG_L02V01 
+X_Y_D_DG_L02V01                                   
+      0.18000000000000000D+01
+ &NATURE D_DG_L03V01 
+X_Y_D_DG_L03V01                                   
+      0.26000000000000001D+01
+ &NATURE L_ROOTFRAC  
+L_ROOTFRAC                                        
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_GROUND_DPT
+L_GROUND_DPT                                      
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_ROOT_DEPTH
+L_ROOT_DEPTH                                      
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_ROOT_EXT  
+L_ROOT_EXT                                        
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_ROOT_LIN  
+L_ROOT_LIN                                        
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_DICE      
+L_ROOT_LIN                                        
+ T F F F F F F F F F F F F F F F F F F F
+ &NATURE D_DICE_V01  
+X_Y_D_DICE_V01                                    
+      0.14400000000000002D+01
+ &NATURE L_GMES      
+L_GMES                                            
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_BSLAI     
+L_BSLAI                                           
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_LAIMIN    
+L_LAIMIN                                          
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_SEFOLD    
+L_SEFOLD                                          
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_GC        
+L_GC                                              
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_DMAX      
+L_DMAX                                            
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_F2I       
+L_F2I                                             
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_STRESS    
+L_STRESS                                          
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_H_TREE    
+L_H_TREE                                          
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_RE25      
+L_RE25                                            
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_CE_NITRO  
+L_CE_NITRO                                        
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_CF_NITRO  
+L_CF_NITRO                                        
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_CNA_NITRO 
+L_CNA_NITRO                                       
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_IRRIGTYPE 
+L_IRRIGTYPE                                       
+ F F F F F F F F F F F F F F F F F F F F
+ &NATURE L_CONDSAT   
+L_CONDSAT                                         
+ F
+ &NATURE L_MPOTSAT   
+L_MPOTSAT                                         
+ F
+ &NATURE L_BCOEF     
+L_BCOEF                                           
+ F
+ &NATURE L_WWILT     
+L_WWILT                                           
+ F
+ &NATURE L_WFC       
+L_WFC                                             
+ F
+ &NATURE L_WSAT      
+L_WSAT                                            
+ F
+ &TOWN   TEB_PATCH   
+TEB_PATCH                                         
+           1
+ &TOWN   ROOF_LAYER  
+ROOF_LAYER                                        
+           5
+ &TOWN   ROAD_GRID   
+ROAD_GRID                                         
+LOW5                                    
+ &TOWN   TEB_SOIL_LAY
+TEB_SOIL_LAY                                      
+           5
+ &TOWN   TEB_SGRID1  
+Depth of TEB soilgrid layer 1                     
+   1.0000000000000000E-002
+ &TOWN   TEB_SGRID2  
+Depth of TEB soilgrid layer 2                     
+  0.10000000000000001     
+ &TOWN   TEB_SGRID3  
+Depth of TEB soilgrid layer 3                     
+  0.50000000000000000     
+ &TOWN   TEB_SGRID4  
+Depth of TEB soilgrid layer 4                     
+   1.0000000000000000     
+ &TOWN   TEB_SGRID5  
+Depth of TEB soilgrid layer 5                     
+   3.0000000000000000     
+ &TOWN   ROAD_LAYER  
+ROAD_LAYER                                        
+           4
+ &TOWN   WALL_LAYER  
+WALL_LAYER                                        
+           5
+ &TOWN   NTIME_CHANGE
+NTIME_CHANGE                                      
+           0
+ &TOWN   TRAF_MONTHLY
+TRAF_MONTHLY                                      
+      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01
+ &TOWN   TRAF_DAILY  
+TRAF_DAILY                                        
+      0.10500000000000000D+01      0.10700000000000001D+01      0.10800000000000001D+01      0.10900000000000001D+01      0.11499999999999999D+01      0.85999999999999999D+00      0.69999999999999996D+00
+ &TOWN   TRAF_HOURLY 
+TRAF_HOURLY                                       
+      0.36363636363636365D+00      0.36363636363636365D+00      0.36363636363636365D+00      0.36363636363636365D+00      0.36363636363636365D+00      0.36363636363636365D+00      0.36363636363636365D+00      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.14545454545454546D+01      0.36363636363636365D+00      0.36363636363636365D+00      0.36363636363636365D+00
+ &TOWN   POP_MONTHLY 
+POP_MONTHLY                                       
+      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01
+ &TOWN   POP_DAILY   
+POP_DAILY                                         
+      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01
+ &TOWN   POP_HOURLY  
+POP_HOURLY                                        
+      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01      0.10000000000000000D+01
+ &TOWN   BEM         
+BEM                                               
+DEF                                     
+ &TOWN   BLD_ATYPE   
+BLD_ATYPE                                         
+MAJ                                     
+ &TOWN   SOLAR_PANEL 
+SOLAR_PANEL                                       
+ F
+ &TOWN   SPARTACUS   
+SPARTACUS                                         
+ F
+ &TOWN   EXPLW       
+EXPLW                                             
+ F
+ &TOWN   CHECK_TEB   
+CHECK_TEB                                         
+ T
+ &TOWN   EPS_BUD_GLOB
+EPS_BUD_GLOB                                      
+   1.0000000000000000E-003
+ &TOWN   EPS_BUD_FAC 
+EPS_BUD_FAC                                       
+   9.9999999999999995E-007
+ &TOWN   DO_SW       
+DO_SW                                             
+ T
+ &TOWN   DO_LW       
+DO_LW                                             
+ T
+ &TOWN   SW_DIR_ALB  
+SW_DIR_ALB                                        
+ F
+ &TOWN   DO_VEG      
+DO_VEG                                            
+ T
+ &TOWN   DO_URBAN    
+DO_URBAN                                          
+ T
+ &TOWN   VEGREGURB   
+VEGREGURB                                         
+           1
+ &TOWN   VEGREGFOR   
+VEGREGFOR                                         
+           1
+ &TOWN   NSW         
+NSW                                               
+           1
+ &TOWN   NLW         
+NLW                                               
+           1
+ &TOWN   STREAMSWURB 
+STREAMSWURB                                       
+           4
+ &TOWN   STREAMLWURB 
+STREAMLWURB                                       
+           4
+ &TOWN   STREAMSWFOR 
+STREAMSWFOR                                       
+           4
+ &TOWN   STREAMLWFOR 
+STREAMLWFOR                                       
+           4
+ &TOWN   SYMVEGURB   
+SYMVEGURB                                         
+ F
+ &TOWN   SYMVEGFOR   
+SYMVEGFOR                                         
+ F
+ &TOWN   VEGISOURB   
+VEGISOURB                                         
+   0.0000000000000000     
+ &TOWN   VEGISOFOR   
+VEGISOFOR                                         
+   0.0000000000000000     
+ &TOWN   MIN_VEGFR   
+MIN_VEGFR                                         
+   9.9999999999999995E-007
+ &TOWN   MIN_BLDFR   
+MIN_BLDFR                                         
+   9.9999999999999995E-007
+ &TOWN   GD_CLAY     
+X_Y_GD_CLAY                                       
+      0.33000000000000002D+00
+ &TOWN   GD_SAND     
+X_Y_GD_SAND                                       
+      0.33000000000000002D+00
+ &TOWN   L_BLDTYPE   
+L_BLDTYPE                                         
+ F
+ &TOWN   L_P1TERR    
+L_P1TERR                                          
+ F
+ &TOWN   L_PXTERR    
+L_PXTERR                                          
+ F
+ &TOWN   L_IBLDAGE   
+L_IBLDAGE                                         
+ F
+ &TOWN   L_CBLDAGE   
+L_CBLDAGE                                         
+ F
+ &TOWN   L_USETYPE   
+L_USETYPE                                         
+ F
+ &TOWN   L_FRACIHS   
+L_FRACIHS                                         
+ F
+ &TOWN   L_FRACCHS   
+L_FRACCHS                                         
+ F
+ &TOWN   L_FRACCOM   
+L_FRACCOM                                         
+ F
+ &TOWN   L_FRACTER   
+L_FRACTER                                         
+ F
+ &TOWN   L_FRACIND   
+L_FRACIND                                         
+ F
+ &TOWN   L_FRACNHE   
+L_FRACNHE                                         
+ F
+ &TOWN   L_FRACPAV   
+L_FRACPAV                                         
+ F
+ &TOWN   L_FRACMRI   
+L_FRACMRI                                         
+ F
+ &TOWN   L_FRACHRI   
+L_FRACHRI                                         
+ F
+ &TOWN   L_FRACATB   
+L_FRACATB                                         
+ F
+ &TOWN   L_FOEQI_MAIS
+L_FOEQI_MAIS                                      
+ F
+ &TOWN   L_FOEQI_APPT
+L_FOEQI_APPT                                      
+ F
+ &TOWN   L_FAEQI_MAIS
+L_FAEQI_MAIS                                      
+ F
+ &TOWN   L_FAEQI_APPT
+L_FAEQI_APPT                                      
+ F
+ &TOWN   L_CRE_MAIS  
+L_CRE_MAIS                                        
+ F
+ &TOWN   L_CRE_APPT  
+L_CRE_APPT                                        
+ F
+ &TOWN   L_Z0_TOWN   
+L_Z0_TOWN                                         
+ T
+ &TOWN   D_Z0_TOWN   
+X_Y_D_Z0_TOWN    (m)                              
+      0.18999999999999999D+01
+ &TOWN   L_BLD       
+L_BLD                                             
+ T
+ &TOWN   D_BLDFRA    
+X_Y_D_BLDFRA     (-)                              
+      0.68899999999999995D+00
+ &TOWN   D_RDFRA     
+X_Y_D_RDFRA      (-)                              
+      0.31100000000000000D+00
+ &TOWN   D_FRAC_HVEG 
+X_Y_D_FRAC_HVEG                                   
+      0.00000000000000000D+00
+ &TOWN   D_FRAC_LVEG 
+X_Y_D_FRAC_LVEG                                   
+      0.00000000000000000D+00
+ &TOWN   D_FRAC_NVEG 
+X_Y_D_FRAC_NVEG                                   
+      0.00000000000000000D+00
+ &TOWN   URBTREE     
+URBTREE                                           
+NONE                                    
+ &TOWN   L_GREENROOF 
+L_GREENROOF                                       
+ F
+ &TOWN   L_ROAD_DIR  
+L_ROAD_DIR                                        
+ F
+ &TOWN   L_ALB_ROOF  
+L_ALB_ROOF                                        
+ T
+ &TOWN   D_ALB_ROOF  
+X_Y_D_ALB_ROOF   (-)                              
+      0.21700000000000000D+00
+ &TOWN   L_EMIS_ROOF 
+L_EMIS_ROOF                                       
+ T
+ &TOWN   D_EMI_ROOF  
+X_Y_D_EMI_ROOF   (-)                              
+      0.90000000000000002D+00
+ &TOWN   PAR_RF_LAYER
+Number of specified Roof thermal layers           
+           4
+ &TOWN   L_HC_ROOF   
+L_HC_ROOF                                         
+ T
+ &TOWN   D_HC_ROOF1  
+X_Y_D_HC_ROOF1   (J/K/m3)                         
+      0.17690000000000000D+07
+ &TOWN   D_HC_ROOF2  
+X_Y_D_HC_ROOF2   (J/K/m3)                         
+      0.15000000000000000D+07
+ &TOWN   D_HC_ROOF3  
+X_Y_D_HC_ROOF3   (J/K/m3)                         
+      0.29000000000000000D+06
+ &TOWN   D_HC_ROOF4  
+X_Y_D_HC_ROOF4   (J/K/m3)                         
+      0.15200000000000000D+07
+ &TOWN   L_TC_ROOF   
+L_TC_ROOF                                         
+ T
+ &TOWN   D_TC_ROOF1  
+X_Y_D_TC_ROOF1   (W/K/m)                          
+      0.90300000000000002D+00
+ &TOWN   D_TC_ROOF2  
+X_Y_D_TC_ROOF2   (W/K/m)                          
+      0.93000000000000005D+00
+ &TOWN   D_TC_ROOF3  
+X_Y_D_TC_ROOF3   (W/K/m)                          
+      0.50000000000000003D-01
+ &TOWN   D_TC_ROOF4  
+X_Y_D_TC_ROOF4   (W/K/m)                          
+      0.19000000000000000D+00
+ &TOWN   L_D_ROOF    
+L_D_ROOF                                          
+ T
+ &TOWN   D_D_ROOF1   
+X_Y_D_D_ROOF1    (m)                              
+      0.20000000000000000D-01
+ &TOWN   D_D_ROOF2   
+X_Y_D_D_ROOF2    (m)                              
+      0.14999999999999999D+00
+ &TOWN   D_D_ROOF3   
+X_Y_D_D_ROOF3    (m)                              
+      0.12000000000000000D+00
+ &TOWN   D_D_ROOF4   
+X_Y_D_D_ROOF4    (m)                              
+      0.29999999999999999D-01
+ &TOWN   L_ALB_ROAD  
+L_ALB_ROAD                                        
+ T
+ &TOWN   D_ALB_ROAD  
+X_Y_D_ALB_ROAD   (-)                              
+      0.80000000000000002D-01
+ &TOWN   L_EMIS_ROAD 
+L_EMIS_ROAD                                       
+ T
+ &TOWN   D_EMI_ROAD  
+X_Y_D_EMI_ROAD   (-)                              
+      0.93999999999999995D+00
+ &TOWN   L_HC_COAT_RD
+L_HC_COAT_RD                                      
+ T
+ &TOWN   D_HC_COAT_RD
+X_Y_D_HC_COAT_RD (J/K/m3)                         
+      0.18250000000000000D+07
+ &TOWN   L_TC_COAT_RD
+L_TC_COAT_RD                                      
+ T
+ &TOWN   D_TC_COAT_RD
+X_Y_D_TC_COAT_RD (W/K/m)                          
+      0.66300000000000003D+00
+ &TOWN   L_D_COAT_RD 
+L_D_COAT_RD                                       
+ T
+ &TOWN   D_D_COAT_RD 
+X_Y_D_D_COAT_RD  (m)                              
+      0.40000000000000001D-01
+ &TOWN   L_HC_BASE_RD
+L_HC_BASE_RD                                      
+ T
+ &TOWN   D_HC_BASE_RD
+X_Y_D_HC_BASE_RD (J/K/m3)                         
+      0.14000000000000000D+07
+ &TOWN   L_TC_BASE_RD
+L_TC_BASE_RD                                      
+ T
+ &TOWN   D_TC_BASE_RD
+X_Y_D_TC_BASE_RD (W/K/m)                          
+      0.40000000000000002D+00
+ &TOWN   L_ALB_WALL  
+L_ALB_WALL                                        
+ T
+ &TOWN   D_ALB_WALL  
+X_Y_D_ALB_WALL   (-)                              
+      0.20000000000000001D+00
+ &TOWN   L_EMIS_WALL 
+L_EMIS_WALL                                       
+ T
+ &TOWN   D_EMI_WALL  
+X_Y_D_EMI_WALL   (-)                              
+      0.90000000000000002D+00
+ &TOWN   PAR_WL_LAYER
+Number of specified Wall thermal layers           
+           4
+ &TOWN   L_HC_WALL   
+L_HC_WALL                                         
+ T
+ &TOWN   D_HC_WALL1  
+X_Y_D_HC_WALL1   (J/K/m3)                         
+      0.18900000000000000D+07
+ &TOWN   D_HC_WALL2  
+X_Y_D_HC_WALL2   (J/K/m3)                         
+      0.18900000000000000D+07
+ &TOWN   D_HC_WALL3  
+X_Y_D_HC_WALL3   (J/K/m3)                         
+      0.80400000000000000D+06
+ &TOWN   D_HC_WALL4  
+X_Y_D_HC_WALL4   (J/K/m3)                         
+      0.56400000000000000D+06
+ &TOWN   L_TC_WALL   
+L_TC_WALL                                         
+ T
+ &TOWN   D_TC_WALL1  
+X_Y_D_TC_WALL1   (W/K/m)                          
+      0.17700000000000000D+01
+ &TOWN   D_TC_WALL2  
+X_Y_D_TC_WALL2   (W/K/m)                          
+      0.17700000000000000D+01
+ &TOWN   D_TC_WALL3  
+X_Y_D_TC_WALL3   (W/K/m)                          
+      0.75700000000000001D+00
+ &TOWN   D_TC_WALL4  
+X_Y_D_TC_WALL4   (W/K/m)                          
+      0.18800000000000000D+00
+ &TOWN   L_D_WALL    
+L_D_WALL                                          
+ T
+ &TOWN   D_D_WALL1   
+X_Y_D_D_WALL1    (m)                              
+      0.10000000000000000D-01
+ &TOWN   D_D_WALL2   
+X_Y_D_D_WALL2    (m)                              
+      0.40000000000000001D-01
+ &TOWN   D_D_WALL3   
+X_Y_D_D_WALL3    (m)                              
+      0.14999999999999999D+00
+ &TOWN   D_D_WALL4   
+X_Y_D_D_WALL4    (m)                              
+      0.59999999999999998D-01
+ &TOWN   L_BLD_HEIGHT
+L_BLD_HEIGHT                                      
+ T
+ &TOWN   D_BLD_HEIG  
+X_Y_D_BLD_HEIG   (m)                              
+      0.15600000000000000D+02
+ &TOWN   L_WALL_O_HOR
+L_WALL_O_HOR                                      
+ T
+ &TOWN   D_WALL_O_H  
+X_Y_D_WALL_O_H   (-)                              
+      0.11399999999999999D+01
+ &TOWN   L_H_TRAF    
+L_H_TRAF                                          
+ T
+ &TOWN   D_H_TRAF    
+X_Y_D_H_TRAF     (W/m2)                           
+      0.00000000000000000D+00
+ &TOWN   L_LE_TRAF   
+L_LE_TRAF                                         
+ T
+ &TOWN   D_LE_TRAF   
+X_Y_D_LE_TRAF    (W/m2)                           
+      0.00000000000000000D+00
+ &TOWN   L_H_IND     
+L_H_IND                                           
+ T
+ &TOWN   D_H_IND     
+X_Y_D_H_IND      (W/m2)                           
+      0.00000000000000000D+00
+ &TOWN   L_LE_IND    
+L_LE_IND                                          
+ T
+ &TOWN   D_LE_IND    
+X_Y_D_LE_IND     (W/m2)                           
+      0.00000000000000000D+00
+ &TOWN   L_ROUGH_ROOF
+L_ROUGH_ROOF                                      
+ F
+ &TOWN   L_ROUGH_WALL
+L_ROUGH_WALL                                      
+ F
+ &TOWN   L_EMIS_PANEL
+L_EMIS_PANEL                                      
+ F
+ &TOWN   L_ALB_PANEL 
+L_ALB_PANEL                                       
+ F
+ &TOWN   L_EFF_PANEL 
+L_EFF_PANEL                                       
+ F
+ &TOWN   L_FRAC_PANEL
+L_FRAC_PANEL                                      
+ F
+ &TOWN   L_NB_POP    
+L_NB_POP                                          
+ F
+ &TOWN   L_SFCO2_RD  
+L_SFCO2_RD                                        
+ F
+ &TOWN   L_DELTA_LEGA
+L_DELTA_LEGA                                      
+ F
+ &TOWN   L_TIME_OF_CH
+L_TIME_OF_CH                                      
+ F
+ &TOWN   PAR_GARDEN  
+FLAG FOR SPECIFIED GARDEN PARAMETERS              
+ F
+ &TOWN   L_PAR_GD_IRR
+FLAG FOR SPECIFIED GARDEN IRRIGATION PARAMETERS   
+ F
+ &TOWN   L_PAR_GR_IRR
+FLAG FOR SPECIFIED GREENROOFS IRRIGATION PARAMETER
+ F
+ &TOWN   L_PAR_RD_IRR
+FLAG FOR SPECIFIED ROAD IRRIGATION PARAMETERS     
+ F

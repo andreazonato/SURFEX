@@ -41,6 +41,7 @@
 USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 USE MODD_GRID_CONF_PROJ_n, ONLY : GRID_CONF_PROJ_t
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODD_DATA_SEAFLUX_n, ONLY : DATA_SEAFLUX_t
 !
@@ -78,7 +79,7 @@ INTEGER, INTENT(IN) :: KSIZE
 !              -------------------------------
 !
 REAL, DIMENSION(:,:), ALLOCATABLE :: ZDATA_SST
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
  CHARACTER(LEN=100):: YCOMMENT       ! Comment string
  CHARACTER(LEN=1)  :: YDIR
 INTEGER           :: ILUOUT

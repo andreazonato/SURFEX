@@ -44,6 +44,7 @@
 USE MODI_READ_SURF
 !
 USE MODD_GRID_CARTESIAN, ONLY : XX, XY, NX, NY
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
@@ -64,7 +65,7 @@ INTEGER,           INTENT(OUT)   :: KNI          ! number of points
 !      ------------------------------
 !
 REAL, DIMENSION(:), ALLOCATABLE :: ZW ! work array
- CHARACTER(LEN=12) :: YRECFM    ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM    ! Name of the article to be read
  CHARACTER(LEN=1) :: YDIR
 INTEGER           :: IRESP
 INTEGER           :: JL        ! loop counter

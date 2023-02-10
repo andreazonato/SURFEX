@@ -38,6 +38,7 @@ SUBROUTINE OL_READ_ATM_CONF_NETCDF (DTCO, U, HGRID, HSURF_FILETYPE, ODELAYEDSTAR
 !!      Modified by P. Le Moigne (04/2006): init_io_surf for nature
 !!                  with GTMSK to read dimensions.
 !!      Modified by Matthieu Lafaysse 2012-11-12
+!!      Modified by B. Decharme  (03/2020): add NEND_ATM for forcing interpolation
 !==================================================================
 !
 !
@@ -47,6 +48,8 @@ USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 USE MODD_TYPE_DATE_SURF
 !
 USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, NCOMM, NPROC, XTIME_COMM_READ, XTIME_NPIO_READ
+!
+USE MODD_IO_SURF_OL, ONLY : NEND_ATM
 !
 USE MODI_SET_SURFEX_FILEIN
 USE MODI_GET_LUOUT
@@ -141,10 +144,9 @@ IF (NPROC>1) THEN
 #endif
 ENDIF
 !
- CALL READ_SURF(&
-                'OFFLIN','FRC_TIME_STP'  ,PTSTEP_FORC   ,IRET)
+CALL READ_SURF('OFFLIN','FRC_TIME_STP',PTSTEP_FORC,IRET)
 !
-PDURATION = ( INB_FORC - 1 ) * PTSTEP_FORC
+PDURATION = ( INB_FORC - NEND_ATM ) * PTSTEP_FORC
 !
 !*      2.    Read full grid dimension and date
 !
@@ -171,6 +173,7 @@ ALLOCATE(PZS (KNI))
 ALLOCATE(PZREF(KNI))
 ALLOCATE(PUREF(KNI))
 !
+
 IF (GLONLAT1D) THEN
   ALLOCATE(ZLAT1D(INLAT1D))
   ALLOCATE(ZLON1D(INLON1D))
@@ -239,7 +242,7 @@ IF (NRANK == NPIO) THEN
       IF ( KYEAR==IYEAR .AND. KMONTH==IMONTH .AND. KDAY==IDAY .AND. PTIME==ZTIME ) THEN
         KTIMESTARTINDEX = JINDEX
         INB_FORC        = INB_FORC-KTIMESTARTINDEX+1
-        PDURATION       = ( INB_FORC - 1 ) * PTSTEP_FORC
+        PDURATION       = ( INB_FORC - NEND_ATM ) * PTSTEP_FORC
         EXIT
       END IF
       
@@ -285,7 +288,7 @@ IF (NRANK == NPIO) THEN
       IF ( KDATESTOP(1)==IYEAR .AND. KDATESTOP(2)==IMONTH .AND. KDATESTOP(3)==IDAY &
                 .AND. KDATESTOP(4)==INT(ZTIME) ) THEN
         INB_FORC  = JINDEX-KTIMESTARTINDEX+1
-        PDURATION = ( INB_FORC - 1 ) * PTSTEP_FORC
+        PDURATION = ( INB_FORC - NEND_ATM ) * PTSTEP_FORC
         EXIT
       END IF
     END DO

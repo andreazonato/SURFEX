@@ -34,6 +34,7 @@ PROGRAM PREP
 !!    ------------
 !!
 !!    Original     22/04/04
+!!    08/2016 R. Séférian modification of landuse implementation
 !!
 !----------------------------------------------------------------------------
 !
@@ -115,8 +116,6 @@ INTEGER            :: ILUNAM
 INTEGER            :: IYEAR, IMONTH, IDAY
 REAL               :: ZTIME
 LOGICAL            :: GFOUND
-
-REAL, DIMENSION(0) :: ZZS
 CHARACTER(LEN=28)  :: YATMFILE  ='                            '  ! name of the Atmospheric file
 CHARACTER(LEN=6)   :: YATMFILETYPE ='      '                     ! type of the Atmospheric file
 CHARACTER(LEN=28)  :: YPGDFILE  ='                            '  ! name of the pgd file
@@ -128,12 +127,9 @@ INTEGER, DIMENSION(11)  :: IDATEF
 !
 TYPE (PREP_CTL) :: YLCTL
 !
-#ifdef SFX_MPI
-INTEGER, DIMENSION(MPI_STATUS_SIZE) :: ISTATUS
-#endif
 INTEGER :: ILEVEL, INFOMPI
 INTEGER :: JNW, INW
-INTEGER :: IRET, INB, JPROC
+INTEGER :: IRET, INB
 DOUBLE PRECISION :: XTIME0
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
@@ -277,7 +273,7 @@ ENDIF
 !*    4.      Store of surface physiographic fields
 !             -------------------------------------
 !
-CALL FLAG_UPDATE(YSC%IM%ID%O, YSC%DUO, .FALSE.,.TRUE.,.FALSE.,.FALSE.)
+CALL FLAG_UPDATE(YSC%IM%ID%O, YSC%DUO, .FALSE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.)
 !
 !* opens the file
 IF (NRANK==NPIO) THEN
@@ -329,7 +325,7 @@ DO JNW = 1,INW
   CALL IO_BUFF_CLEAN
   !
   ! FLAG_UPDATE now in WRITE_PGD_SURF_ATM_n
-  CALL WRITE_SURF_ATM_n(YSC, CSURF_FILETYPE,'PRE',LLAND_USE) !no pgd field
+  CALL WRITE_SURF_ATM_n(YSC, CSURF_FILETYPE,'PRE') !no pgd field
   CALL WRITE_DIAG_SURF_ATM_n(YSC, CSURF_FILETYPE,'ALL')
   !
   LDEF = .FALSE.

@@ -73,6 +73,8 @@ TYPE SURF_ATM_t
 !
   LOGICAL                        :: LWATER_TO_NATURE ! T: Change Wetland treated as inland water into nature 
   LOGICAL                        :: LTOWN_TO_ROCK    ! T: Change Town into Rock
+  LOGICAL                        :: LTOWN_TO_COVER   ! T: Change Town into selected COVER
+  INTEGER                        :: NREPLACE_COVER   ! The COVER number to be used to replace the Town
 !
 !-------------------------------------------------------------------------------
 !
@@ -148,7 +150,7 @@ TYPE SURF_ATM_t
 !
 !-----------------------------------------------------------------------------------------------------
 !
-! physical fields need into the restart file for ARPEGE/ALADIN run
+! physical and carbon fields need into the restart file for ARPEGE/ALADIN run
 !
   REAL, POINTER, DIMENSION(:)   :: XRAIN    ! Rainfall rate at surface               (kg/m2/s)
   REAL, POINTER, DIMENSION(:)   :: XSNOW    ! snowfall rate at surface               (kg/m2/s)
@@ -156,20 +158,14 @@ TYPE SURF_ATM_t
   REAL, POINTER, DIMENSION(:)   :: XZ0H     ! surface roughness length for heat      (m)
   REAL, POINTER, DIMENSION(:)   :: XQSURF   ! specific humidity at surface           (kg/kg)
 !
+  REAL, POINTER, DIMENSION(:)   :: XCO2FOS  ! fossil fuel flux                       (kgC/m2/s)
+!
 !-----------------------------------------------------------------------------------------------------
 !
 !
 END TYPE SURF_ATM_t
 !
-
-
 CONTAINS
-
-
-!
-
-
-!
 !
 SUBROUTINE SURF_ATM_INIT(YSURF_ATM)
 TYPE(SURF_ATM_t), INTENT(INOUT) :: YSURF_ATM
@@ -191,6 +187,7 @@ IF (LHOOK) CALL DR_HOOK("MODD_SURF_ATM_N:SURF_ATM_INIT",0,ZHOOK_HANDLE)
   NULLIFY(YSURF_ATM%XZ0)
   NULLIFY(YSURF_ATM%XZ0H)
   NULLIFY(YSURF_ATM%XQSURF)
+  NULLIFY(YSURF_ATM%XCO2FOS)
 YSURF_ATM%CTOWN=' '
 YSURF_ATM%CNATURE=' '
 YSURF_ATM%CWATER=' '
@@ -199,6 +196,8 @@ YSURF_ATM%LECOCLIMAP=.FALSE.
 YSURF_ATM%LECOSG=.FALSE.
 YSURF_ATM%LWATER_TO_NATURE=.FALSE.
 YSURF_ATM%LTOWN_TO_ROCK=.FALSE.
+YSURF_ATM%LTOWN_TO_COVER=.FALSE.
+YSURF_ATM%NREPLACE_COVER=0
 YSURF_ATM%LGARDEN=.FALSE.
 YSURF_ATM%NSIZE_SEA=0
 YSURF_ATM%NDIM_SEA=0

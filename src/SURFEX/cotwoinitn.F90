@@ -3,7 +3,7 @@
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 !     #########
-      SUBROUTINE COTWOINIT_n (IO, S, PK, PEK, PCO2  )  
+      SUBROUTINE COTWOINIT_n (IO, S, PK, PEK, PCO2, NPAR_VEG_IRR_USE )  
 !     #######################################################################
 !
 !!****  *COTWOINIT*  
@@ -55,6 +55,8 @@
 !!      B. Decharme   05/2012    Optimization
 !!      R. Alkama     05/2012    add 7 new vegtype (19  instead 12)
 !!      C. Delire     01/2014    Define a dummy LAI from top and total lai for Dark respiration 
+!!      A. Druel      02/2019    Adapt the code to be compatible with new irrigation
+!!      B. Decharme   01/2021    Add XSIYEA to compute exactly XTAU_WOOD from year to s
 !!
 !-------------------------------------------------------------------------------
 !
@@ -66,11 +68,12 @@ USE MODD_ISBA_n, ONLY : ISBA_P_t, ISBA_S_t, ISBA_PE_t
 USE MODD_DATA_COVER_PAR, ONLY : NVEGTYPE_ECOSG, NVEGTYPE, NVT_C3, NVT_C3W, NVT_C3S, NVT_C4, NVT_IRR, &
                                 NVT_TROG, NVT_TEBD, NVT_BONE, NVT_TRBE, NVT_TRBD,    &
                                 NVT_TEBE, NVT_TENE, NVT_BOBD, NVT_BOND, NVT_SHRB, NVT_GRAS
-USE MODD_CSTS,           ONLY : XMD
+USE MODD_CSTS,           ONLY : XMD, XSIYEA
 USE MODD_CO2V_PAR,       ONLY : XTOPT, XFZERO1, XFZERO2, XFZEROTROP, XEPSO, XGAMM, XQDGAMM, &
                                   XQDGMES, XT1GMES, XT2GMES, XAMAX, ITRANSFERT_ESG,         &
                                   XQDAMAX, XT1AMAX, XT2AMAX, XAH, XBH,            &
                                   XDSPOPT, XIAOPT, XAW, XBW, XMCO2, XMC, XTAU_WOOD  
+USE MODD_AGRI,           ONLY : NVEG_IRR
 ! 
 USE MODI_COTWO  
 !
@@ -86,18 +89,19 @@ IMPLICIT NONE
 !*      0.1    declarations of arguments
 !
 TYPE(ISBA_OPTIONS_t), INTENT(INOUT) :: IO
-TYPE(ISBA_P_t), INTENT(INOUT) :: PK
-TYPE(ISBA_PE_t), INTENT(INOUT) :: PEK
-TYPE(ISBA_S_t), INTENT(INOUT) :: S
+TYPE(ISBA_P_t), INTENT(INOUT)       :: PK
+TYPE(ISBA_PE_t), INTENT(INOUT)      :: PEK
+TYPE(ISBA_S_t), INTENT(INOUT)       :: S
 !
-REAL,DIMENSION(:),INTENT(IN)  :: PCO2
+REAL, DIMENSION(:), INTENT(IN)      :: PCO2
+INTEGER, DIMENSION(:), INTENT(IN)   :: NPAR_VEG_IRR_USE ! vegtype with irrigation
 !                                     PK%XGMES     = mesophyll conductance (m s-1)
 !                                     PCO2      = atmospheric CO2 concentration
 !
 !*      0.2    declaration of local variables
 !
 INTEGER                           :: JCLASS    ! indexes for loops
-INTEGER                           :: ICLASS    ! indexes for loops
+INTEGER                           :: JCLASS2   ! Change index with irrigation (and ECOSG)
 INTEGER                           :: ICO2TYPE  ! type of CO2 vegetation
 INTEGER                           :: IRAD      ! with or without new radiative transfer
 !
@@ -162,14 +166,16 @@ ZCO2INIT5(:) = 0.
 ! --------------------------------------------
 ! as a function of CO2 vegetation class, C3=>1, C4=>2
 !
-DO JCLASS=1,NVEGTYPE
+DO JCLASS=1,NVEGTYPE+NVEG_IRR
   !
-  IF (JCLASS==NVT_C4 .OR. JCLASS==NVT_IRR .OR. JCLASS==NVT_TROG) THEN
+  JCLASS2 = JCLASS
+  IF ( JCLASS2 > NVEGTYPE ) JCLASS2 = NPAR_VEG_IRR_USE( JCLASS - NVEGTYPE )
+  !
+  IF (JCLASS2==NVT_C4 .OR. JCLASS2==NVT_IRR .OR. JCLASS2==NVT_TROG) THEN
     ICO2TYPE = 2   ! C4 type
   ELSE
     ICO2TYPE = 1   ! C3 type
   END IF
-  IF(IO%LAGRI_TO_GRASS.AND.(JCLASS==NVT_C4 .OR. JCLASS==NVT_IRR)) ICO2TYPE = 1
   IF (IO%LTR_ML) THEN
     IRAD = 1   ! running with new radiative transfer
   ELSE
@@ -177,11 +183,11 @@ DO JCLASS=1,NVEGTYPE
   ENDIF
   !
   ZTOPT  (:) = ZTOPT  (:) + XTOPT  (ICO2TYPE) * PK%XVEGTYPE_PATCH(:,JCLASS)
-  IF((JCLASS==NVT_TEBD) .OR. (JCLASS==NVT_BONE) .OR.                         &
-    (JCLASS==NVT_TRBD) .OR. (JCLASS==NVT_TEBE) .OR. (JCLASS==NVT_TENE) .OR. &
-    (JCLASS==NVT_BOBD) .OR. (JCLASS==NVT_BOND) .OR. (JCLASS==NVT_SHRB)) THEN
+  IF((JCLASS2==NVT_TEBD) .OR. (JCLASS2==NVT_BONE) .OR.                         &
+    (JCLASS2==NVT_TRBD) .OR. (JCLASS2==NVT_TEBE) .OR. (JCLASS2==NVT_TENE) .OR. &
+    (JCLASS2==NVT_BOBD) .OR. (JCLASS2==NVT_BOND) .OR. (JCLASS2==NVT_SHRB)) THEN
     PK%XFZERO (:) = PK%XFZERO (:) + ((XAW - LOG(PEK%XGMES(:)*1000.0))/XBW)*PK%XVEGTYPE_PATCH(:,JCLASS)
-  ELSE IF (JCLASS==NVT_TRBE) THEN
+  ELSE IF (JCLASS2==NVT_TRBE) THEN
     PK%XFZERO (:) = PK%XFZERO (:) + XFZEROTROP(IRAD) * PK%XVEGTYPE_PATCH(:,JCLASS)
   ELSE
     PK%XFZERO (:) = PK%XFZERO (:) + XFZERO2 (ICO2TYPE) * PK%XVEGTYPE_PATCH(:,JCLASS)
@@ -199,19 +205,12 @@ DO JCLASS=1,NVEGTYPE
   PK%XAH    (:) = PK%XAH    (:) + XAH    (ICO2TYPE) * PK%XVEGTYPE_PATCH(:,JCLASS)
   PK%XBH    (:) = PK%XBH    (:) + XBH    (ICO2TYPE) * PK%XVEGTYPE_PATCH(:,JCLASS)
   !
-  IF(IO%LAGRI_TO_GRASS.AND.(JCLASS==NVT_C3 .OR. JCLASS==NVT_C3W .OR. JCLASS==NVT_C3S .OR. &
-                            JCLASS==NVT_C4 .OR. JCLASS==NVT_IRR))THEN
-    ICLASS=NVT_GRAS
-  ELSE
-    ICLASS=JCLASS
-  ENDIF    
-  !
   IF (NVEGTYPE==NVEGTYPE_ECOSG) THEN
-    PK%XTAU_WOOD(:) = PK%XTAU_WOOD(:) + XTAU_WOOD(ITRANSFERT_ESG(ICLASS)) * PK%XVEGTYPE_PATCH(:,JCLASS)
-    PK%XAMAX    (:) = PK%XAMAX    (:) + XAMAX    (ITRANSFERT_ESG(ICLASS)) * PK%XVEGTYPE_PATCH(:,JCLASS)          
+    PK%XTAU_WOOD(:) = PK%XTAU_WOOD(:) + (XTAU_WOOD(ITRANSFERT_ESG(JCLASS2))*XSIYEA) * PK%XVEGTYPE_PATCH(:,JCLASS)
+    PK%XAMAX    (:) = PK%XAMAX    (:) + XAMAX     (ITRANSFERT_ESG(JCLASS2))         * PK%XVEGTYPE_PATCH(:,JCLASS)          
   ELSE
-    PK%XTAU_WOOD(:) = PK%XTAU_WOOD(:) + XTAU_WOOD(ICLASS) * PK%XVEGTYPE_PATCH(:,JCLASS)
-    PK%XAMAX    (:) = PK%XAMAX    (:) + XAMAX    (ICLASS) * PK%XVEGTYPE_PATCH(:,JCLASS)
+    PK%XTAU_WOOD(:) = PK%XTAU_WOOD(:) + (XTAU_WOOD(JCLASS2)*XSIYEA) * PK%XVEGTYPE_PATCH(:,JCLASS)
+    PK%XAMAX    (:) = PK%XAMAX    (:) + XAMAX     (JCLASS2)         * PK%XVEGTYPE_PATCH(:,JCLASS)
   ENDIF
   !
 END DO

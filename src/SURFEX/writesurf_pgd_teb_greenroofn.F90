@@ -40,6 +40,8 @@
 !
 USE MODD_ISBA_OPTIONS_n, ONLY : ISBA_OPTIONS_t
 USE MODD_ISBA_n, ONLY : ISBA_K_t
+USE MODD_SURF_PAR, ONLY: LEN_HREC
+!
 !
 USE MODI_WRITE_SURF
 !
@@ -65,7 +67,7 @@ TYPE(ISBA_K_t), INTENT(INOUT) :: K
 !              -------------------------------
 !
 INTEGER           :: IRESP          ! IRESP  : return-code if a problem appears
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
  CHARACTER(LEN=100):: YCOMMENT       ! Comment string
 !
 REAL(KIND=JPRB) :: ZHOOK_HANDLE

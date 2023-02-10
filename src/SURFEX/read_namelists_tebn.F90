@@ -13,11 +13,9 @@ USE MODD_SURFEX_n, ONLY : TEB_MODEL_t
 USE MODD_ISBA_OPTIONS_n, ONLY : ISBA_OPTIONS_t
 !
 USE MODN_TEB_n                          
-USE MODN_TEB_VEG_n,            ONLY: CRUNOFF,CSCOND,                       &
-                                     CC1DRY, CSOILFRZ, CDIFSFCOND, CSNOWRES,       &
-                                     CCPSURF, XCGMAX, CKSAT,                       &
-                                     CRAIN, CHORT, LGLACIER,                       &
-                                     LCANOPY_DRAG, LVEGUPD, LNITRO_DILU
+USE MODN_TEB_VEG_n,            ONLY: CRUNOFF,CSCOND, CC1DRY, CSOILFRZ, CDIFSFCOND, CSNOWRES, &
+                                     CCPSURF, XCGMAX, CKSAT, CRAIN, CHORT, LGLACIER,         &
+                                     LCANOPY_DRAG, LVEGUPD, LNITRO_DILU, LDOWNREGU, XCNLIM
 USE MODN_TEB_GREENROOF_n,      ONLY: CRUNOFF_GR,CSCOND_GR,CKSAT_GR,CHORT_GR
 !
 USE MODI_DEFAULT_TEB
@@ -52,13 +50,12 @@ REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !------------------------------------------------------------------------------------
 !
 IF (LHOOK) CALL DR_HOOK('READ_NAMELISTS_TEB_N',0,ZHOOK_HANDLE)
- CALL DEFAULT_TEB(CZ0H,XTSTEP,XOUT_TSTEP, CCH_BEM, XDT_RES, XDT_OFF)
 !
- CALL DEFAULT_TEB_VEG(CRUNOFF, CSCOND,                 &
-                      CC1DRY, CSOILFRZ, CDIFSFCOND, CSNOWRES,   &
-                      CCPSURF, XCGMAX, CKSAT,                   &
-                      CRAIN, CHORT, LGLACIER,                   &
-                      LCANOPY_DRAG, LVEGUPD, LNITRO_DILU        )
+CALL DEFAULT_TEB(CZ0H,CZ0EFF_GD,XTSTEP,XOUT_TSTEP, CCH_BEM, CURB_LM, CSOLAR_PANEL)
+!
+ CALL DEFAULT_TEB_VEG(CRUNOFF, CSCOND, CC1DRY, CSOILFRZ, CDIFSFCOND, CSNOWRES,&
+                      CCPSURF, XCGMAX, CKSAT, CRAIN, CHORT, LGLACIER,         &
+                      LCANOPY_DRAG, LVEGUPD, LNITRO_DILU, XCNLIM, LDOWNREGU)
 !
  CALL DEFAULT_GREENROOF(CRUNOFF_GR,CSCOND_GR, CKSAT_GR,CHORT_GR)
 !
@@ -68,10 +65,10 @@ IF (LHOOK) CALL DR_HOOK('READ_NAMELISTS_TEB_N',0,ZHOOK_HANDLE)
                       LCOEF,LSURF_VARS,LSURF_MISC_BUDGET,&
                       LSURF_DIAG_ALBEDO,LUTCI,LPGD,XDIAG_TSTEP)   
 !               
- CALL READ_DEFAULT_TEB_n(TM%CHT, TM%TD%MTO, TM%TD%O, TM%TD%DUT, GRO, TM%NT%AL(1), TM%TOP, &
+ CALL READ_DEFAULT_TEB_n(TM%CHT, TM%TD%MTO, TM%TD%O, TM%TD%DU, GRO, TM%NT%AL(1), TM%TOP, TM%TPN, &
                          HPROGRAM)
 !
- CALL READ_TEB_CONF_n(TM%CHT, TM%TD%MTO, TM%TD%O, TM%TD%DUT, TM%NT%AL(1), TM%TOP, &
+ CALL READ_TEB_CONF_n(TM%CHT, TM%TD%MTO, TM%TD%O, TM%TD%DU, TM%NT%AL(1), TM%TOP, TM%TPN, &
                       HPROGRAM) 
 !  
  CALL READ_TEB_VEG_CONF_n(TM%CHT, GDO, HPROGRAM) 

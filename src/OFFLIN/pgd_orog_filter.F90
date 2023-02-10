@@ -34,7 +34,7 @@
 !!
 !!    Original    10/12/97
 !!    12/2008 E. Martin : add case 'MAX' for choice of orography
-!!
+!!    09/2018 Y. Seity  : add new filtering options
 !----------------------------------------------------------------------------
 !
 !*    0.     DECLARATION
@@ -74,7 +74,11 @@ TYPE(SURF_ATM_GRID_t), INTENT(INOUT) :: UG
 !            ------------------------
 !
 REAL, DIMENSION(:), ALLOCATABLE :: ZZS, ZSEA
+INTEGER                  :: NOPTFILTER  ! filtering option
 INTEGER                  :: NZSFILTER   ! number of orographic spatial filter iterations
+REAL(KIND=JPRB)          :: RCOFILTER   ! filtering coefficient
+REAL(KIND=JPRB)          :: RTHFILTER   ! filtering threshold
+
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
 !-------------------------------------------------------------------------------
@@ -89,7 +93,7 @@ IF (LHOOK) CALL DR_HOOK('PGD_OROGRAPHY',0,ZHOOK_HANDLE)
 !*    2.      Reading of namelist
 !             -------------------
 !
- CALL READ_NAM_PGD_OROG_FILTER(HPROGRAM, NZSFILTER )  
+ CALL READ_NAM_PGD_OROG_FILTER(HPROGRAM, NOPTFILTER,NZSFILTER,RCOFILTER,RTHFILTER) 
 !
 !-------------------------------------------------------------------------------
 !
@@ -106,7 +110,7 @@ ENDIF
  CALL GATHER_AND_WRITE_MPI(U%XZS,ZZS)
  CALL GATHER_AND_WRITE_MPI(U%XSEA,ZSEA)
 !
-IF (NRANK==NPIO) CALL OROGRAPHY_FILTER(CGRID, UG%XGRID_FULL_PAR, ZSEA, NZSFILTER, ZZS)
+IF (NRANK==NPIO) CALL OROGRAPHY_FILTER(HPROGRAM,CGRID, UG%XGRID_FULL_PAR, ZSEA, NOPTFILTER,NZSFILTER,RCOFILTER,RTHFILTER,ZZS)
 !
  CALL READ_AND_SEND_MPI(ZZS,U%XZS)
 !

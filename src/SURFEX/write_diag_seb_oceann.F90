@@ -35,6 +35,7 @@
 USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 USE MODD_DIAG_OCEAN_n, ONLY : DIAG_OCEAN_t
+USE MODD_SURF_PAR, ONLY: LEN_HREC
 !
 USE MODD_OCEAN_GRID
 !
@@ -62,7 +63,7 @@ TYPE(DIAG_OCEAN_t), INTENT(INOUT) :: DGO
 !              -------------------------------
 !
 INTEGER           :: IRESP          ! IRESP  : return-code if a problem appears
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
  CHARACTER(LEN=100):: YCOMMENT       ! Comment string
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !

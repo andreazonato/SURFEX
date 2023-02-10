@@ -1,9 +1,9 @@
 !SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
 !SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
-!SFX_LIC for details. version 1.
+!SFX_LIC for details. version 1
 !     #########
-      SUBROUTINE OROGRAPHY_FILTER(HGRID,PGRID_PAR,PSEA,KZSFILTER,PZS)
+      SUBROUTINE OROGRAPHY_FILTER(HPROGRAM,HGRID,PGRID_PAR,PSEA,KOPTFILTER,KZSFILTER,PCOFILTER,PTHFILTER,PZS)
 !     ##############################################################
 !
 !!**** *OROGRAPHY_FILTER* filters the orography
@@ -33,7 +33,7 @@
 !!    ------------
 !!
 !!    Original    06/2004
-!!
+!!    Y. Seity : 09-2018 new options for filtering 
 !----------------------------------------------------------------------------
 !
 !*    0.     DECLARATION
@@ -51,10 +51,14 @@ IMPLICIT NONE
 !*    0.1    Declaration of arguments
 !            ------------------------
 !
- CHARACTER(LEN=10),    INTENT(IN)    :: HGRID    ! type of grid
-REAL, DIMENSION(:),   INTENT(IN)     :: PGRID_PAR! lits of parameters used to define the grid
+CHARACTER(LEN=6),     INTENT(IN)    :: HPROGRAM ! name of calling program
+CHARACTER(LEN=10),    INTENT(IN)    :: HGRID    ! type of grid
+REAL, DIMENSION(:),   INTENT(IN)    :: PGRID_PAR! list of parameters used to define the grid
 REAL, DIMENSION(:),   INTENT(IN)    :: PSEA     ! sea  fraction
+INTEGER,              INTENT(IN)    :: KOPTFILTER! filtering option
 INTEGER,              INTENT(IN)    :: KZSFILTER! number of filter iteration
+REAL,                 INTENT(IN)    :: PCOFILTER! filtering coefficient
+REAL,                 INTENT(IN)    :: PTHFILTER! filtering threshold
 REAL, DIMENSION(:),   INTENT(INOUT) :: PZS      ! orography
 !
 !
@@ -108,7 +112,7 @@ END DO
 !*    4.     Filtering in x and Y directions
 !            -------------------------------
 !
-IF (KZSFILTER>0) CALL ZSFILTER(ZZS,(1.-ZSEA),KZSFILTER)
+IF (KZSFILTER>0) CALL ZSFILTER(HPROGRAM,ZZS,(1.-ZSEA),KOPTFILTER,KZSFILTER,PCOFILTER,PTHFILTER)
 !
 !-------------------------------------------------------------------------------
 !

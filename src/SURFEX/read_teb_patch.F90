@@ -10,6 +10,7 @@
 !
 !
 USE MODI_READ_SURF
+USE MODD_SURF_PAR, ONLY: LEN_HREC
 !
 USE MODI_OPEN_AUX_IO_SURF
 USE MODI_CLOSE_AUX_IO_SURF
@@ -34,7 +35,7 @@ INTEGER,            INTENT(OUT) :: KTEB_PATCH! number of TEB patches
 !  ---------------
 !
  CHARACTER(LEN=1) :: YDIR
- CHARACTER(LEN=12) :: YRECFM     ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM     ! Name of the article to be read
 INTEGER           :: IRESP      ! reading return code
 !
 REAL(KIND=JPRB) :: ZHOOK_HANDLE

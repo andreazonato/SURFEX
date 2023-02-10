@@ -30,6 +30,7 @@ SUBROUTINE PREP_HOR_SEAFLUX_FIELD (DTCO, UG, U, GCP, DTS, O, OR, KLAT, S, &
 !!      P. Le Moigne 09/2007, sst from clim
 !!      S. Senesi    09/2013, extends to fields of SSS and SIC
 !!      P. Marguinaud10/2014, Support for a 2-part PREP
+!!      M.N. Bouin   03/2014, possibility of wave parameters from external source
 !!------------------------------------------------------------------
 !
 USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
@@ -205,6 +206,12 @@ IF (YDCTL%LPART5) THEN
   CASE('SIC    ')
     ALLOCATE(S%XSIC(SIZE(ZFIELDOUT,1)))
     S%XSIC(:) = ZFIELDOUT(:,1)
+  CASE('HS     ')
+    ALLOCATE(S%XHS(SIZE(ZFIELDOUT,1)))
+    S%XHS(:) = ZFIELDOUT(:,1)
+  CASE('TP     ')
+    ALLOCATE(S%XTP(SIZE(ZFIELDOUT,1)))
+    S%XTP(:) = ZFIELDOUT(:,1)    
   END SELECT
 !
 ENDIF

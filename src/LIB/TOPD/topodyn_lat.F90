@@ -4,8 +4,7 @@
 !SFX_LIC for details. version 1.
 !-----------------------------------------------------------------
 !     ###########################
-SUBROUTINE TOPODYN_LAT(PRW,PDEF,PKAPPA,PKAPPAC,GTOPD)
-!,PERROR)
+SUBROUTINE TOPODYN_LAT(PRW,PDEF,PKAPPA,PKAPPAC,OTOPD)
 !     ###########################
 !
 !
@@ -33,16 +32,15 @@ SUBROUTINE TOPODYN_LAT(PRW,PDEF,PKAPPA,PKAPPAC,GTOPD)
 !
 !     Original    12/2003
 !     writing in fortran 90 12/2004
+!     Modification 07/2017: adding more controls for UNDEF variables
 !------------------------------------------------------------------------------------------
 !
 !*    0.0    DECLARATIONS
 !            ------------
-USE MODD_TOPODYN,       ONLY : NNCAT, NMESHT, XDMAXT, XDXT, XMPARA, NNMC, XCONN, NLINE,&
-                                 XSLOP,  XDAREA, XLAMBDA
-USE MODD_COUPLING_TOPD, ONLY : XWSTOPT, XDTOPT
-USE MODD_TOPD_PAR,        ONLY : XSTEPK
+USE MODD_TOPODYN,       ONLY : NNCAT, NMESHT, XDMAXT, XDXT, XMPARA, NNMC, XCONN, NLINE,XLAMBDA
+USE MODD_TOPD_PAR,      ONLY : XSTEPK
 !
-USE MODD_SURF_PAR,        ONLY : XUNDEF
+USE MODD_SURF_PAR,      ONLY : XUNDEF
 !
 USE MODI_FLOWDOWN
 USE MODI_ABOR1_SFX
@@ -60,12 +58,11 @@ REAL, DIMENSION(:,:), INTENT(IN)   :: PRW
 REAL, DIMENSION(:,:), INTENT(OUT)  :: PDEF
 REAL, DIMENSION(:,:), INTENT(OUT)  :: PKAPPA
 REAL, DIMENSION(:), INTENT(OUT)    :: PKAPPAC
-LOGICAL, DIMENSION(:), INTENT(OUT) :: GTOPD
+LOGICAL, DIMENSION(:), INTENT(OUT) :: OTOPD
 !
 !*    0.2   declarations of local variables
 !
 LOGICAL              :: GFOUND  ! logical variable
-REAL                 :: ZSOMME
 REAL                 :: ZM      ! XMPARA in m
 REAL                 :: ZDX     ! XDXT in m
 REAL                 :: ZKVAL, ZKVALMIN, ZKVALMAX
@@ -85,7 +82,6 @@ REAL, DIMENSION(NMESHT) :: ZRW       ! PRW in m
 REAL, DIMENSION(NMESHT) :: ZDINI     ! initial deficit
 REAL, DIMENSION(NMESHT) :: ZMASK
 REAL, DIMENSION(NMESHT) :: ZKAPPA_PACK, ZDMAX_PACK
-!REAL, DIMENSION(NMESHT) :: ZTMP
 !
 INTEGER              :: J1, J2, JJ !
 INTEGER              :: INKAPPA ! number of steps in similarity index distribution
@@ -98,9 +94,9 @@ REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !-----------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('TOPODYN_LAT',0,ZHOOK_HANDLE)
 !
-PKAPPA(:,: )= 0.0
-PKAPPAC(:) = 0.
-GTOPD(:) = .TRUE.
+PKAPPA(:,:)=XLAMBDA(:,:)
+PKAPPAC(:) = MAXVAL(XLAMBDA) + 1.
+OTOPD(:) = .TRUE.
 PDEF(:,:) = 0.
 ZAS=0.
 ZAD=1.
@@ -116,8 +112,6 @@ DO JJ = 1,NNCAT
   ZDAV2 = 0.0
   GFOUND = .FALSE.
   ZDIFMIN = 99999.
-  !
-  ZKAV = 0.
   !
   ZRW(:) = PRW(JJ,:) 
   ZDMAX(:) = XDMAXT(JJ,:)
@@ -153,14 +147,13 @@ DO JJ = 1,NNCAT
   !
   DO J1=1,NNMC(JJ)
     !
-    IF (ZMASK(J1)/=XUNDEF) THEN
+    IF (ZMASK(J1)/=XUNDEF.AND.ZRW(J1)/=XUNDEF.AND.ZDMAX(J1)/=XUNDEF) THEN
       !
       PKAPPA(JJ,J1) = ZRW(J1) 
       INPCON = INPCON + 1
       ZDINI(J1) = ZDMAX(J1) - ZRW(J1)
       !
       IF ( ZDINI(J1) <0.0 ) THEN
-        ! WRITE(*,*) J1,'Dini negatif !'
         ZTMP = ZTMP - ZDINI(J1) !we stock here water above saturation to be
                                 !       distributed among the others pixels
         ZDINI(J1) = 0.
@@ -177,7 +170,6 @@ DO JJ = 1,NNCAT
   ENDDO
   !
   IF (ZTMP>0.) THEN
-    !write(*,*) COUNT(ZDINI(:)<0.),' pixels avec ZDINI negatif. Volume total :', ZTMP
     WHERE ( ZDINI(:)>0. ) ZDINI(:) = ZDINI(:)-ZTMP/(COUNT(ZDINI(:)>0.))
   ENDIF
   !
@@ -198,11 +190,10 @@ DO JJ = 1,NNCAT
     !
     DO WHILE ( .NOT.GFOUND .AND. J2.LE.NNMC(JJ) )
       !
-      IF (ZMASK(J2)/=XUNDEF) THEN
+      IF (ZMASK(J2)/=XUNDEF.AND.PKAPPA(JJ,J2)/=XUNDEF.AND.XLAMBDA(JJ,J2)/=XUNDEF) THEN
         !
         GFOUND = .TRUE.
         ZKVAL = PKAPPA(JJ,J2) * EXP(XLAMBDA(JJ,J2))
-        !ZKVAL = PKAPPA(JJ,J2) * XDAREA(JJ,J2) / XSLOP(JJ,J2)
         ZKVAL = LOG(ZKVAL)
         ZKVALMAX = ZKVAL
         ZKVALMIN = ZKVAL
@@ -217,13 +208,12 @@ DO JJ = 1,NNCAT
       J2 = J2 + 1
       !
     ENDDO
-    !   
+    !     
     DO J1 = J2,NNMC(JJ)
       !
-      IF (ZMASK(J1)/=XUNDEF) THEN
+      IF (ZMASK(J1)/=XUNDEF.AND.PKAPPA(JJ,J1)/=XUNDEF.AND.XLAMBDA(JJ,J1)/=XUNDEF) THEN
         !
         ZKVAL = PKAPPA(JJ,J1) * EXP(XLAMBDA(JJ,J1))
-!       ZKVAL = PKAPPA(JJ,J1) * XDAREA(JJ,J1) / XSLOP(JJ,J1)
         ZKVAL = LOG(ZKVAL)
         !
         IF (ZKVAL.GT.ZKVALMAX) THEN
@@ -263,10 +253,10 @@ DO JJ = 1,NNCAT
       !
       DO J2=1,I_DIM      
         !      
-        IF ( ZKAPPA_PACK(J2).GE.ZKVAL ) THEN
+        IF ( ZKAPPA_PACK(J2).GE.ZKVAL .AND. ZKAPPA_PACK(J2)/=XUNDEF) THEN
           ! saturated pixel
           INAS = INAS + 1
-        ELSEIF  (ZKAPPA_PACK(J2).LE.( ZKVAL-(ZDMAX_PACK(J2)/ZM)) ) THEN
+        ELSEIF  (ZKAPPA_PACK(J2).LE.( ZKVAL-(ZDMAX_PACK(J2)/ZM)) .AND. ZKAPPA_PACK(J2)/=XUNDEF ) THEN
           ! dry pixel
           INAD = INAD + 1
           ZNDMAXAV = ZNDMAXAV + ZDMAX_PACK(J2)
@@ -327,47 +317,46 @@ DO JJ = 1,NNCAT
       !
       IF (ZAS>=1.) WRITE(*,*) 'ALL THE AREA IS SATURATED'
       IF (ZAD>=1.) WRITE(*,*) 'ALL THE AREA HAS A MAXIMAL DEFICIT'
-      WRITE(*,*) 'ALL THE AREA',ZAS,ZAD
-     ! CALL ABOR1_SFX("TOPODYN_LAT: ALL THE AREA IS SATURATED OR HAS A MAXIMAL DEFICIT")
       !
     ENDIF
     !
     !*    2.2    Local deficits 
     !            --------------
     !
-   ! ZSOMME=0.0
-    !ZTMP(:)=XUNDEF
-    !
     DO J1=1,NNMC(JJ)
       !
-      IF ( ZMASK(J1)/=XUNDEF ) THEN
+      IF ( ZMASK(J1)/=XUNDEF .AND.ZDMAX(J1)/=XUNDEF) THEN
         !
-        IF ( (PKAPPA(JJ,J1).GT.(PKAPPAC(JJ) - ZDMAX(J1)/ZM)) .AND. (PKAPPA(JJ,J1).LT.PKAPPAC(JJ)) ) THEN
+        IF ( (PKAPPA(JJ,J1).GT.(PKAPPAC(JJ) - ZDMAX(J1)/ZM)) .AND.& !??
+             (PKAPPA(JJ,J1).LT.PKAPPAC(JJ)).AND.&
+             (PKAPPA(JJ,J1)/=XUNDEF).AND.&
+             (PKAPPAC(JJ)/=XUNDEF) .AND. ZDMAX(J1)/=XUNDEF ) THEN
           !
           PDEF(JJ,J1) = ZM * (ZKAV - PKAPPA(JJ,J1)) + ZDAV2
-          !ZTMP(J1) = 0.5
           IF (PDEF(JJ,J1) < 0.0) PDEF(JJ,J1) = 0.0
           !
-        ELSEIF ( PKAPPA(JJ,J1).GE.PKAPPAC(JJ) ) THEN
+        ELSEIF ( PKAPPA(JJ,J1).GE.PKAPPAC(JJ) .AND.&
+                (PKAPPA(JJ,J1)/=XUNDEF).AND.&
+                (PKAPPAC(JJ)/=XUNDEF) ) THEN
           !
           PDEF(JJ,J1) = 0.0
-          !ZTMP(J1) = 1.
           !
-        ELSEIF ( PKAPPA(JJ,J1).LE.(PKAPPAC(JJ) - ZDMAX(J1)/ZM) ) THEN
+        ELSEIF ( PKAPPA(JJ,J1).LE.(PKAPPAC(JJ) - ZDMAX(J1)/ZM) .AND.&
+                (PKAPPA(JJ,J1)/=XUNDEF).AND.&
+                (PKAPPAC(JJ)/=XUNDEF) .AND. ZDMAX(J1)/=XUNDEF ) THEN
           !
           PDEF(JJ,J1) = ZDMAX(J1)
-          !ZTMP(J1) = -1.0
           !
         ENDIF
         !
         ! nouveau contenu en eau total (m)
-        !ZSOMME = ZSOMME + ( XWSTOPT(JJ,J1)*XDTOPT(JJ,J1) - PDEF(JJ,J1) )
         !
       ELSE
         !
         PDEF(JJ,J1) = ZDMAX(J1)
         !
       ENDIF
+      PDEF(JJ,J1)=MIN(MAX(PDEF(JJ,J1),0.0),ZDMAX(J1))
       !
     ENDDO
     !
@@ -380,20 +369,18 @@ DO JJ = 1,NNCAT
       !
     ENDDO
     !
-    GTOPD(JJ)=.TRUE.
+    OTOPD(JJ)=.TRUE.
     !
- ELSE
+  ELSE
     !
     !  'Pas de redistribution laterale'
-    GTOPD(JJ)=.FALSE.
-    !
-    PKAPPA(JJ,:) = XUNDEF
-    !  PDEF(JJ,:) = ZDMAX(:) - ZRW(:)
-    PDEF(JJ,:) = ZDINI(:)
+    OTOPD(JJ)=.FALSE.
     PKAPPAC(JJ) = XUNDEF
+    PKAPPA(JJ,:) = XUNDEF
+    PDEF(JJ,:)=MIN(MAX(ZDINI(:),0.0),MIN(ZDMAX(:),0.5))
     !
   ENDIF
-  ! 
+  !
 ENDDO
 !
 IF (LHOOK) CALL DR_HOOK('TOPODYN_LAT',1,ZHOOK_HANDLE)

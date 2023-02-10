@@ -52,6 +52,9 @@ INTEGER                             :: NMESHT   ! maximal number of catchments m
 REAL, ALLOCATABLE, DIMENSION(:,:)   :: XDMAXT   ! maximal deficit on TOPODYN grid (m)
 REAL, ALLOCATABLE, DIMENSION(:)     :: XDXT     ! catchment grid mesh size (m)
 REAL, ALLOCATABLE, DIMENSION(:)     :: XMPARA   ! M parameter on TOPODYN grid (m)
+REAL, ALLOCATABLE, DIMENSION(:)     :: XA_SPEED ! A parameter for river speed computation
+REAL, ALLOCATABLE, DIMENSION(:)     :: XB_SPEED ! B parameter for river speed computation
+REAL, ALLOCATABLE, DIMENSION(:,:)   :: XALERT    ! ALERT LEVEL for each point of the watershed, each time step
 
 INTEGER, ALLOCATABLE, DIMENSION(:)  :: NNMC     ! catchments pixels number
 REAL, ALLOCATABLE, DIMENSION(:,:,:) :: XCONN    ! pixels reference number and 
@@ -93,6 +96,8 @@ REAL, ALLOCATABLE, DIMENSION(:,:)   :: XQTOT    ! Total discharge at the outlet 
 
 REAL, DIMENSION(JPCAT)              :: XSPEEDR,XSPEEDH ! River and hillslope speed
 REAL, DIMENSION(JPCAT)              :: XSPEEDG         ! Ground speed
+REAL, DIMENSION(JPCAT)              :: XMAX_SPEED         ! Ground speed
+LOGICAL                             :: LSPEEDR_VAR  ! T to modulate river speed according to the discharge
 REAL, ALLOCATABLE, DIMENSION(:,:)   :: XDRIV, XDHIL    ! River and hillslope distances
 REAL, ALLOCATABLE, DIMENSION(:,:)   :: XDGRD           ! Ground distance
 REAL, ALLOCATABLE, DIMENSION(:,:)   :: XTIME_TOPD      ! Time to go to the outlet
@@ -104,9 +109,6 @@ INTEGER, ALLOCATABLE, DIMENSION(:)  :: NX_STEP_ROUT   ! number of maximal time s
 
 ! Variables used in exfiltration module 
 REAL, ALLOCATABLE, DIMENSION(:,:)   :: XLAMBDA  ! pure topographic index
-REAL, ALLOCATABLE, DIMENSION(:,:)   :: XCSTOPT  ! hydraulic conductivity at saturation on 
-                                                ! TOP-LAT grid
-                                                !ludo
 REAL, ALLOCATABLE, DIMENSION(:,:)   :: XQB_DR
 REAL, ALLOCATABLE, DIMENSION(:,:)   :: XQB_RUN
 ! for topodyn alone
@@ -115,6 +117,28 @@ REAL, ALLOCATABLE, DIMENSION(:)   :: XSRFULL! reservoir of interception for
 !TOPODYN only
 REAL, ALLOCATABLE, DIMENSION(:,:) :: XDEFT! pixel deficit
 !
+! Variables to introduce sub catchments
+INTEGER                             :: NNCAT_MAX    ! maximum number of subcatchments
+INTEGER, ALLOCATABLE, DIMENSION(:)  :: NNCAT_SUB    ! number of subcatchments for each catchment
+                                                    ! maximum value 99
+INTEGER, ALLOCATABLE, DIMENSION(:,:):: NBPIX_SUB! For sub catchments, number of pixels in the sub-catchment
+INTEGER, ALLOCATABLE, DIMENSION(:,:):: NRIV_JUNCTION! For sub catchments, closest river junction pixel 
+INTEGER, ALLOCATABLE, DIMENSION(:,:):: NCAT_CAT_TO_SUB !Mask giving the numero of the sub catchment for each pixel
+                                                       !of a Catchment  
+INTEGER, ALLOCATABLE, DIMENSION(:,:):: NPIX_CAT_TO_SUB !Mask  giving the numero of the pixel for each pixel
+                                                       !of a Catchment 
+INTEGER, ALLOCATABLE, DIMENSION(:,:,:):: NPIX_SUB_TO_CAT !Mask  giving the numero of the  pixel of Catchment
+                                                       !for each pixel of sub-catchment
+INTEGER, ALLOCATABLE, DIMENSION(:,:):: NMASK_OUTLET ! Mask of sub catchments outlet
+REAL   , ALLOCATABLE, DIMENSION(:,:,:):: XDIST_OUTLET ! distance between catchment outlet ans sub cat outlets
+REAL   , ALLOCATABLE, DIMENSION(:,:):: XDRIV_SUBCAT ! River distances for sub catchments
+REAL, ALLOCATABLE, DIMENSION(:,:,:)   :: XQTOT_SUB! Total discharge at the outlet of sub-catchments
+REAL, ALLOCATABLE, DIMENSION(:,:,:)   :: XQB_DR_SUB
+REAL, ALLOCATABLE, DIMENSION(:,:,:)   :: XQB_RUN_SUB
+REAL, ALLOCATABLE, DIMENSION(:,:)   :: XTIME_TOPD_SUB      ! Time to go to any river point
+                                                       ! at the soil surface
+REAL, ALLOCATABLE, DIMENSION(:,:)   :: XTIME_TOPD_DRAIN_SUB! Time to go to any river point in the ground
+
 !-------------------------------------------------------------------------------------
 !
 END MODULE MODD_TOPODYN

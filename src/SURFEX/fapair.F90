@@ -4,8 +4,8 @@
 !SFX_LIC for details. version 1.
 !     ######
 SUBROUTINE FAPAIR(PABC, PFD_SKY, PIA, PLAI, PXMUS, PSSA_SUP, PSSA_INF, &
-           PB_SUP, PB_INF, PALB_VEG, PALB_SOIL, OSHADE,            &
-           PFAPR, PFAPR_BS, PLAI_EFF, PIACAN,                      &
+           PB_SUP, PB_INF, PALB_VEG, PALB_SOIL, OSHADE,                &
+           PFAPR, PFAPR_BS, PRN_SHADE, PRN_SUNLIT, PLAI_EFF, PIACAN,   &
            PIACAN_SHADE, PIACAN_SUNLIT, PFRAC_SUN                  )
 !   #########################################################################
 !
@@ -46,12 +46,15 @@ SUBROUTINE FAPAIR(PABC, PFD_SKY, PIA, PLAI, PXMUS, PSSA_SUP, PSSA_INF, &
 !!      Commented by C. Delire 07/13
 !!      C. Delire   08/13 : moved calculation of diffuse fraction from here to radiative_transfert.F90
 !!      A. Boone    02/17 : corrected computation of PFAPR_BS
+!!      P. Tulet 06/2016 : add RN leaves computation (shade and sunlit) for MEGAN
+!!      J.F. Gueremy 02/17: numerical security in ZWEIGHT
 !!
 !!-------------------------------------------------------------------------------
-USE MODD_SURF_PAR,       ONLY : XUNDEF
+USE MODD_SURF_PAR,   ONLY : XUNDEF
 USE MODD_CO2V_PAR,   ONLY : XK_SUP, XK_INF, XXSI_SUP, XXSI_INF ! clumping index parameters (Carrer et al 2.1.3)
-!
+USE MODD_ISBA_PAR,   ONLY : XDENOM_MIN
 USE MODD_SURFEX_MPI, ONLY : NRANK
+!
 USE MODI_CCETR_PAIR  
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
@@ -78,6 +81,9 @@ LOGICAL, DIMENSION(:), INTENT(IN) :: OSHADE   ! OSHADE = if 1 shading activated
 !
 REAL, DIMENSION(:), INTENT(OUT) :: PFAPR
 REAL, DIMENSION(:), INTENT(OUT) :: PFAPR_BS
+!
+REAL, DIMENSION(:), INTENT(INOUT) :: PRN_SHADE, PRN_SUNLIT
+!
 REAL, DIMENSION(:), OPTIONAL,   INTENT(OUT) :: PLAI_EFF
 !
 REAL, DIMENSION(:,:), OPTIONAL, INTENT(OUT) :: PIACAN ! PAR in the canopy at different gauss level
@@ -95,7 +101,7 @@ REAL, DIMENSION(SIZE(PLAI))   :: ZB_DR_SUP, ZB_DR_INF, ZOMEGA_DR_SUP, ZOMEGA_DR_
 REAL, DIMENSION(SIZE(PLAI))   :: ZTR, ZFD_VEG, ZFD_SUP, ZLAI_EFF0, ZLAI_EFF
 !                                ZTR = transmittance
 !                                ZFD_VEG, ZFD_SUP = fraction of radiation diffused by the considered medium (vegetation)     
-!REAL, DIMENSION(SIZE(PLAI))  :: ZXIA_SUNLIT, ZXIA_SHADE, ZLAI_SUNLIT, ZLAI_SHADE
+REAL, DIMENSION(SIZE(PLAI))  :: ZXIA_SUNLIT, ZXIA_SHADE, ZLAI_SUNLIT, ZLAI_SHADE
 !                                ZXIA_SUNLIT = absorbed PAR of sunlit leaves
 !                                ZXIA_SHADE = absorbed PAR of shaded leaves
 !                                ZLAI_SUNLIT = LAI of sunlit leaves
@@ -123,10 +129,10 @@ ZXIA_SUP(:) = 0.
 ZFD_VEG(:)  = 0.
 ZFD_SUP(:)  = 0.
 !
-!ZXIA_SUNLIT(:) = 0.
-!ZXIA_SHADE(:)  = 0.
-!ZLAI_SUNLIT(:) = 0.
-!ZLAI_SHADE(:)  = 0.
+ZXIA_SUNLIT(:) = 0.
+ZXIA_SHADE(:)  = 0.
+ZLAI_SUNLIT(:) = 0.
+ZLAI_SHADE(:)  = 0.
 !
 ZLAI_EFF(:) = 0.
 !
@@ -137,8 +143,8 @@ ZFRAC_SUN(:,:)     = 0.
 !
 PFAPR(:)    = 0.
 PFAPR_BS(:) = 0.
-!PRN_SHADE(:) = 0.
-!PRN_SUNLIT(:) = 0.
+PRN_SHADE(:) = 0.
+PRN_SUNLIT(:) = 0.
 !
 !
 IF (PABC(SIZE(PABC)).GT.0.8) ZFD_VEG(:) = MIN(PFD_SKY(:),1.)   
@@ -216,23 +222,25 @@ DO JINT = SIZE(PABC),1,-1
       !
       !sunlit leaves
       !absorbed PAR of an equivalent canopy representative of the layer of leaves  eq. (8)
-      ZCOEF = (1.0-ZFD_SUP(I))/ZTR(I)+ ZFD_SUP(I)    
-      ZIACAN_SUNLIT(I,JINT) =             ZCOEF/(ZWEIGHT*MAX(0.0001,PLAI(I)))*ZIACAN(I,JINT)    
+      ZCOEF = (1.0-ZFD_SUP(I))/ZTR(I)+ ZFD_SUP(I)
+      !
+      ZIACAN_SUNLIT(I,JINT) =             ZCOEF*ZIACAN(I,JINT)/MAX(XDENOM_MIN,ZWEIGHT*PLAI(I))
+      !
       !not sunlit leaves
-      ZIACAN_SHADE(I,JINT)  = MAX(0.,ZFD_SUP(I)/(ZWEIGHT*MAX(0.0001,PLAI(I)))*ZIACAN(I,JINT))
+      ZIACAN_SHADE(I,JINT)  = MAX(0.,ZFD_SUP(I)*ZIACAN(I,JINT)/MAX(XDENOM_MIN,ZWEIGHT*PLAI(I)))
       !
-      !ZXIA_SUNLIT(I) = ZXIA_SUNLIT(I) + ZWEIGHT*ZTR(I)      *ZIACAN_SUNLIT(I,JINT)
-      !ZLAI_SUNLIT(I) = ZLAI_SUNLIT(I) + ZWEIGHT*ZTR(I)*ZCOEF*PLAI(I)
+      ZXIA_SUNLIT(I) = ZXIA_SUNLIT(I) + ZWEIGHT*ZTR(I)      *ZIACAN_SUNLIT(I,JINT)
+      ZLAI_SUNLIT(I) = ZLAI_SUNLIT(I) + ZWEIGHT*ZTR(I)*ZCOEF*PLAI(I)
       !
-      !ZXIA_SHADE(I)  = ZXIA_SHADE(I)  + ZWEIGHT*(1-ZTR(I))           *ZIACAN_SHADE(I,JINT)
-      !ZLAI_SHADE(I)  = ZLAI_SHADE(I)  + ZWEIGHT*(1-ZTR(I))*ZFD_SUP(I)*PLAI(I)
+      ZXIA_SHADE(I)  = ZXIA_SHADE(I)  + ZWEIGHT*(1-ZTR(I))           *ZIACAN_SHADE(I,JINT)
+      ZLAI_SHADE(I)  = ZLAI_SHADE(I)  + ZWEIGHT*(1-ZTR(I))*ZFD_SUP(I)*PLAI(I)
       !
       ZFRAC_SUN(I,JINT) = ZTR(I)  !fraction of sunlit leaves
       !      
     ELSE
       !
-      ZIACAN_SUNLIT(I,JINT) = MAX(0.,ZIACAN(I,JINT)/(ZWEIGHT*MAX(0.0001,PLAI(I))))
-      !ZLAI_SUNLIT(I) = ZLAI_SUNLIT(I) + ZWEIGHT*PLAI(I)
+      ZIACAN_SUNLIT(I,JINT) = MAX(0.,ZIACAN(I,JINT)/MAX(XDENOM_MIN,ZWEIGHT*PLAI(I)))
+      ZLAI_SUNLIT(I) = ZLAI_SUNLIT(I) + ZWEIGHT*PLAI(I)
       !
     ENDIF
     !
@@ -248,8 +256,8 @@ WHERE (PIA(:).NE.0.)
   PFAPR_BS(:)= ZTR(:)*(1.-PALB_SOIL(:)*(1. - PALB_VEG(:)*(1.-ZTR(:))))
 END WHERE
 !
-!WHERE (ZLAI_SHADE(:) .NE.0.) ZRN_SHADE(:)  = ZXIA_SHADE(:) / ZLAI_SHADE(:)
-!WHERE (ZLAI_SUNLIT(:).NE.0.) ZRN_SUNLIT(:) = ZXIA_SUNLIT(:)/ ZLAI_SUNLIT(:)
+WHERE (ZLAI_SHADE(:) .NE.0.) PRN_SHADE(:)  = ZXIA_SHADE(:) / ZLAI_SHADE(:)
+WHERE (ZLAI_SUNLIT(:).NE.0.) PRN_SUNLIT(:) = ZXIA_SUNLIT(:)/ ZLAI_SUNLIT(:)
 !
 IF (PRESENT(PLAI_EFF))      PLAI_EFF      = ZLAI_EFF
 IF (PRESENT(PIACAN))        PIACAN        = ZIACAN

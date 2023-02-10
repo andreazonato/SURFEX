@@ -47,13 +47,14 @@ INTEGER :: NID_NC
 INTEGER :: NLUOUT         ! logical unit of output file
 LOGICAL, SAVE :: LCREATED = .FALSE.
 LOGICAL :: LDEF = .FALSE.
+LOGICAL :: LRESET_DIAG = .TRUE.  ! if true diagnostics are reinitialised
 !
 INTEGER, DIMENSION(:),POINTER :: NMASK=>NULL()
- CHARACTER(LEN=6)               :: CMASK ! surface mask type
+CHARACTER(LEN=6)              :: CMASK ! surface mask type
 INTEGER :: NFULL
 INTEGER :: NFULL_AUX ! total number fo points of surface (Auxilarry file for prep)
 !
-LOGICAL, SAVE                     :: LMASK = .FALSE.
+LOGICAL, SAVE :: LMASK = .FALSE.
 !
 INTEGER, DIMENSION(:),ALLOCATABLE :: NMASK_IGN
 !

@@ -35,7 +35,8 @@
 !!    MODIFICATIONS
 !!    -------------
 !!
-!!      Original  02/2011 
+!!      Original  02/2011
+!!      Modif : correction Nature grid considered instead of full grid 02/2017
 !-------------------------------------------------------------------------------
 !
 !*       0.     DECLARATIONS
@@ -45,7 +46,7 @@ USE MODD_ISBA_OPTIONS_n, ONLY : ISBA_OPTIONS_t
 USE MODD_ISBA_n, ONLY : ISBA_NP_t, ISBA_NPE_t, ISBA_NK_t, ISBA_K_t, ISBA_P_t, ISBA_PE_t
 !
 USE MODD_SURF_PAR,      ONLY : XUNDEF, NUNDEF
-USE MODD_COUPLING_TOPD, ONLY : XTOTBV_IN_MESH, XFRAC_D3
+USE MODD_COUPLING_TOPD, ONLY : XATOP_NATURE, XFRAC_D3,XWOVSATI_P,XDMAXFC
 USE MODD_ISBA_PAR,      ONLY : XWGMIN
 !
 USE YOMHOOK   ,         ONLY : LHOOK,   DR_HOOK
@@ -68,7 +69,7 @@ TYPE(ISBA_K_t), POINTER :: KK
 TYPE(ISBA_P_t), POINTER :: PK
 TYPE(ISBA_PE_t), POINTER :: PEK
 REAL                              :: ZWORK          ! numbers of layers in root and deep zones
-INTEGER                           :: IDEPTH, IMASK
+INTEGER                           :: ZDEPTH
 INTEGER                           :: JI, JL, JP ! loop indexes
 REAL(KIND=JPRB)                   :: ZHOOK_HANDLE
 !-------------------------------------------------------------------------------
@@ -76,49 +77,39 @@ REAL(KIND=JPRB)                   :: ZHOOK_HANDLE
 IF (LHOOK) CALL DR_HOOK('TOPD_TO_DF',0,ZHOOK_HANDLE)
 !
 DO JP=1,IO%NPATCH
-
+  !
   KK => NK%AL(JP)
   PK => NP%AL(JP)
   PEK => NPE%AL(JP)
-
+  !
   IF (PK%NSIZE_P == 0 ) CYCLE
-
-  DO JL = 1,IO%NGROUND_LAYER
-
+  !
+  DO JL = 2,IO%NGROUND_LAYER
+    !
     DO JI=1,PK%NSIZE_P
-      IMASK = PK%NR_P(JI)
-
-      IDEPTH=PK%NWG_LAYER(JI)
-
-      IF(JL<=IDEPTH.AND.IDEPTH/=NUNDEF.AND.(XTOTBV_IN_MESH(IMASK)/=0.0).AND.(XTOTBV_IN_MESH(IMASK)/=XUNDEF)) THEN
-
-      ! root layers
-      IF (PK%XDZG(JI,JL)/=XUNDEF.AND.PK%XDG2(JI)/=XUNDEF.AND.PK%XDG(JI,JL)/=XUNDEF) THEN 
+      !
+      ZDEPTH=PK%XRUNOFFD(JI)!only on the layers where runoff is authorized
+      IF(PK%XDG(JI,JL)<=ZDEPTH.AND.ZDEPTH/=XUNDEF.AND.(XATOP_NATURE(JI)/=0.0)&
+                                         .AND.(XATOP_NATURE(JI)/=XUNDEF)) THEN
+        ! root layers
+        IF (PK%XDZG(JI,JL)/=XUNDEF.AND.PK%XDG2(JI)/=XUNDEF.AND.PK%XDG(JI,JL)/=XUNDEF)&! 
         ZWORK=MIN(PK%XDZG(JI,JL),MAX(0.0,PK%XDG2(JI)-PK%XDG(JI,JL)+PK%XDZG(JI,JL)))
-      ENDIF
-
-      IF ((PWG(IMASK,2)/=XUNDEF).AND.(ZWORK>0.).AND.(ZWORK/=XUNDEF)) THEN
-        PEK%XWG(JI,JL)=MIN(MAX(PWG(IMASK,2),XWGMIN),KK%XWSAT(JI,JL)) 
-      ENDIF
-
-      ! deep layers
-      IF ((XFRAC_D3(IMASK)/=0.0).AND.(XFRAC_D3(IMASK)/=XUNDEF)) THEN     
-
-        IF (PK%XDZG(JI,JL)/=XUNDEF.AND.PK%XDG2(JI)/=XUNDEF.AND.PK%XDG(JI,JL)/=XUNDEF) THEN
-          ZWORK=MIN(PK%XDZG(JI,JL),MAX(0.0,PK%XDG(JI,JL)-PK%XDG2(JI)))
+        !
+        IF ((PWG(JI,2)/=XUNDEF).AND.(ZWORK>0.).AND.(ZWORK/=XUNDEF)&
+                             .AND.(KK%XWSAT(JI,JL)/=XUNDEF) )THEN 
+          PEK%XWG(JI,JL)=MAX(PWG(JI,2),XWGMIN) 
+          IF (PEK%XWG(JI,JL)>KK%XWSAT(JI,JL))THEN
+            XWOVSATI_P(JI) = XWOVSATI_P(JI)+MAX(0.,PEK%XWG(JI,JL) - KK%XWSAT(JI,JL))
+            PEK%XWG(JI,JL)=KK%XWSAT(JI,JL) 
+          ENDIF
         ENDIF
-
-        IF ((PWG(IMASK,3)/=XUNDEF).AND.(ZWORK>0.).AND.(ZWORK/=XUNDEF)) THEN
-          PEK%XWG(JI,JL)=MIN(MAX(PWG(IMASK,3),XWGMIN),KK%XWSAT(JI,JL))
-        ENDIF
-
       ENDIF
-
-    ENDIF
-
+      !
+    ENDDO
+    !
   ENDDO
- ENDDO
-ENDDO
+  !
+ENDDO 
 !
 IF (LHOOK) CALL DR_HOOK('TOPD_TO_DF',1,ZHOOK_HANDLE)
 

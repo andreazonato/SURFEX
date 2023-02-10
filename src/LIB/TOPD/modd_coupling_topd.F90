@@ -27,9 +27,13 @@
 !!    -------------
 !!     Original 29/09/03
 !!              03/2014 (B. Vincendon) new variable to create a mask for N patches
+!!              07/2017 (B. Vincendon) changing name of variable to ditinguish between 
+!!                                     packed and full grid variables + new variables 
+!!                                     for runoff management
 !
 !*       0.   DECLARATIONS
 !             ------------
+USE MODD_TOPD_PAR, ONLY : JPCAT
 !
 IMPLICIT NONE
 !
@@ -38,6 +42,8 @@ IMPLICIT NONE
 LOGICAL                           :: LCOUPL_TOPD      !if T, performs coupling with Topmodel
 LOGICAL                           :: LBUDGET_TOPD     !if T, computes budget
 LOGICAL                           :: LTOPD_STEP
+LOGICAL                           :: LPERT_PARAM
+LOGICAL                           :: LPERT_INIT
 !
 INTEGER                             :: NTOPD_STEP
 INTEGER                             :: NFREQ_MAPS_WG       !frequency of output WG maps
@@ -58,8 +64,11 @@ INTEGER, ALLOCATABLE, DIMENSION(:,:,:) :: NMASKI ! pixel number of each catchmen
 INTEGER, ALLOCATABLE, DIMENSION(:,:)   :: NMASKT    ! mask
 INTEGER, ALLOCATABLE, DIMENSION(:)     :: NMASKT_PATCH    ! mask
 !
-REAL, ALLOCATABLE, DIMENSION(:)     :: XAS_NATURE ! Packed contributive area fraction on Nature grid
-REAL, ALLOCATABLE, DIMENSION(:)     :: XATOP      ! Packed area fraction WITH TOPMODEL on Nature grid
+REAL, ALLOCATABLE, DIMENSION(:)     :: XAS_NATURE   ! Packed contributive area fraction on Nature grid
+REAL, ALLOCATABLE, DIMENSION(:,:)   :: XAS_IBV_P   ! Packed contributive area fraction on Nature grid by catchment
+REAL, ALLOCATABLE, DIMENSION(:,:)   :: XAIBV_F     ! Unpacked area fraction of each catchment on Full grid
+REAL, ALLOCATABLE, DIMENSION(:)     :: XATOP        ! Unpacked area fraction of all cacthments on Full grid
+REAL, ALLOCATABLE, DIMENSION(:)     :: XATOP_NATURE ! Packed area fraction of all cacthments  on Nature grid
 !
 INTEGER, ALLOCATABLE, DIMENSION(:,:)  :: NNBV_IN_MESH   ! Number of pixel of a partical cathment in an ISBA mesh
 REAL, ALLOCATABLE, DIMENSION(:,:)     :: XBV_IN_MESH    ! Area of the ISBA meshes covered by a partical cathment
@@ -79,23 +88,26 @@ REAL, ALLOCATABLE, DIMENSION(:,:)   :: XWSTOPT  ! total water content at saturat
                                                 ! on XDTOPT on TOP-LAT grid
 REAL, ALLOCATABLE, DIMENSION(:)     :: XWFCTOPI ! total field capacity on XDTOPI (m3/m3)
 REAL, ALLOCATABLE, DIMENSION(:,:)   :: XWFCTOPT ! total field capacity on XDTOPT (m3/m3)
-REAL, ALLOCATABLE, DIMENSION(:)     :: XCSTOPI  ! hydraulic conductivity at saturation on 
+REAL, ALLOCATABLE, DIMENSION(:)     :: XWWTOPI  ! hydraulic conductivity at saturation on 
                                                 ! Isba grid, on XDTOPI
+REAL, ALLOCATABLE, DIMENSION(:,:)   :: XWWTOPT  
 REAL, ALLOCATABLE, DIMENSION(:,:)   :: XWTOPT   ! water storage on TOP-LAT grid, after
                                                 ! lateral distribution
+REAL, ALLOCATABLE, DIMENSION(:,:)   ::  XRUNOFF_IBV_P! Runoff by mesh and catchment on isba grid
+REAL, ALLOCATABLE, DIMENSION(:)       :: XWOVSATI_P  ! Volume of water above saturation buy mesh on isba grid
 !
 ! * pour bilans
 REAL, ALLOCATABLE, DIMENSION(:)       :: XAVG_RUNOFFCM !cumulated runoff  (kg/m2) at t-dt
 REAL, ALLOCATABLE, DIMENSION(:)       :: XAVG_DRAINCM ! cumulated drainage calculated from Isba (kg/m2) at t-dt
+REAL, ALLOCATABLE, DIMENSION(:)       :: XRAINFALLCM ! cumulated rainfall calculated from Isba (kg/m2) at t-dt
+REAL, ALLOCATABLE, DIMENSION(:)       :: XAVG_HORTCM ! cumulated Horton calculated from Isba (kg/m2) at t-dt
 !
 REAL, ALLOCATABLE, DIMENSION(:,:)     :: XKA_PRE   ! Hydrological indexes at the previous time step
 REAL, ALLOCATABLE, DIMENSION(:)       :: XKAC_PRE  ! Hydrological index at saturation at the previous time step
 !
 REAL, ALLOCATABLE, DIMENSION(:,:)     :: XDMAXFC   ! Deficit at the field capacity level
-REAL, ALLOCATABLE, DIMENSION(:)       :: XWSUPSAT  ! pour calculer le volume d'eau perdu au-dessus de la saturation
 !
 REAL, ALLOCATABLE, DIMENSION(:)      ::  XDRAIN_TOP ! Value of drainage on TOPMODEL grid
-REAL, ALLOCATABLE, DIMENSION(:)      ::  XRUNOFF_TOP! Value of runoff on TOPMODEL grid
 !
 REAL, ALLOCATABLE, DIMENSION(:)      ::  XFRAC_D2 ! fraction of the second layer concerned with lateral transferts
 REAL, ALLOCATABLE, DIMENSION(:)      ::  XFRAC_D3 ! fraction of the third layer concerned with lateral transferts
@@ -112,12 +124,21 @@ INTEGER                              :: NNB_STP_STOCK   ! number of time step to
 INTEGER, DIMENSION(:), ALLOCATABLE :: NYEAR      ! Year of the beginning of the simulation.
 INTEGER, DIMENSION(:), ALLOCATABLE :: NMONTH     ! Month of the beginning of the simulation.
 INTEGER, DIMENSION(:), ALLOCATABLE :: NDAY      ! Date of the beginning of the simulation.
-INTEGER, DIMENSION(:), ALLOCATABLE :: NH      ! Hour of the beginning of the simulation.
+INTEGER, DIMENSION(:), ALLOCATABLE :: NH      ! Hour of the bFginning of the simulation.
 INTEGER, DIMENSION(:), ALLOCATABLE :: NM      ! Minutes of the beginning of the simulation.
 !
 ! **** For special f, dc exponential profile
 REAL, DIMENSION(:), ALLOCATABLE :: XF_PARAM
 REAL, DIMENSION(:), ALLOCATABLE :: XC_DEPTH_RATIO
 !
+! **** For sub-catchments 
+LOGICAL                           :: LDUMMY_SUBCAT    !if T, dummy sub-catchments defined
+LOGICAL                           :: LSUBCAT          !if T, sub-catchments will be computed
+INTEGER, DIMENSION(JPCAT)         :: NSUBCAT
+REAL,    DIMENSION(JPCAT,JPCAT)   :: XLX,XLY
+REAL,    DIMENSION(JPCAT,JPCAT)   :: XQ2,XQ10,XQ50
+CHARACTER(LEN=15), DIMENSION(JPCAT,JPCAT):: CSUBCAT         ! Names of catchments         
+CHARACTER(LEN=15), DIMENSION(JPCAT):: CFILE_SUBCAT         ! File containing Sub cat information         
+LOGICAL                           :: LWRITE_SEVERITY_MAPS !if T, severity maps  will be computed
+!
 END MODULE MODD_COUPLING_TOPD
-

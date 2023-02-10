@@ -1,6 +1,6 @@
-!SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
+!SFX_LIC Copyright 2004-2019 CNRS, Meteo-France and Universite Paul Sabatier
 !SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
-!SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
+!SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt
 !SFX_LIC for details. version 1.
 !     ################################################
       SUBROUTINE INTERPOL_FIELD2D (UG, U, &
@@ -32,6 +32,8 @@
 !!    Original    01/2004
 !!    Modification
 !!      A. Alias        07/2013 add MODI_ABOR1_SFX
+!!      J. Escobar      09/2017 differencied error message :: SFX / NAM_IO_OFFLINE <=> MNH / NAM_PGDFILE 
+!!      P. Wautelet     01/2019 correct small print bugs
 !----------------------------------------------------------------------------
 !
 !*    0.     DECLARATION
@@ -168,10 +170,17 @@ END IF
 !
 IF (IERR2>0) THEN
   !
-  IF (.NOT.PRESENT(PDEF) .OR. (INEAR_NBR<U%NDIM_FULL .AND. IERR2/=IERR0)) &
-          CALL ABOR1_SFX('Some points lack data and are too far away from other points. &
-                Please define a higher halo value in NAM_IO_OFFLINE.')
-  !
+    IF (.NOT.PRESENT(PDEF) .OR. (INEAR_NBR<U%NDIM_FULL .AND. IERR2/=IERR0)) THEN
+#ifdef MNH
+     WRITE(KLUOUT,*) 'NDIM_FULL=',U%NDIM_FULL,',NHALO=',IHALO,',Pts to interpol=',IERR0 &
+          ,',Pts interpolated=',IERR1,',Pts missing=',IERR2 
+     CALL ABOR1_SFX('Some points lack data and are too far away from other points. &
+          &Please define a higher halo value in &NAM_PGDFILE NHALO=xxx /')
+#else
+     CALL ABOR1_SFX('Some points lack data and are too far away from other points. &
+          &Please define a higher halo value in NAM_IO_OFFLINE.')
+#endif
+  ENDIF  
 ENDIF
 !
 IF (COUNT(KCODE(:)==-4)>0) THEN

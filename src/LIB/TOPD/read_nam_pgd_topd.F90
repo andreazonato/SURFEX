@@ -1,10 +1,8 @@
-!SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
-!SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
-!SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
-!SFX_LIC for details. version 1.
 !----------------------------------------------------------------------------!
 !     ##############################################################
-      SUBROUTINE READ_NAM_PGD_TOPD(HPROGRAM,OCOUPL_TOPD,HCAT,PF_PARAM_BV,PC_DEPTH_RATIO_BV)
+      SUBROUTINE READ_NAM_PGD_TOPD(HPROGRAM,OCOUPL_TOPD,HCAT,PF_PARAM_BV,PC_DEPTH_RATIO_BV,&
+                                   ODUMMY_SUBCAT,OSUBCAT,KSUBCAT,PLX,PLY,&
+                                   HSUBCAT,HFILE_SUBCAT,OWRITE_SEVERITY_MAPS)
 !     ##############################################################
 !
 !!**** *READ_NAM_TOPD_n* reads namelist NAM_TOPD
@@ -52,7 +50,7 @@ USE MODD_TOPODYN, ONLY : NNCAT
 !
 USE MODE_POS_SURF
 !
-USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
+USE YOMHOOK   ,ONLY : LHOOK, DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
 !
 IMPLICIT NONE
@@ -60,20 +58,32 @@ IMPLICIT NONE
 !*    0.1    Declaration of arguments
 !            ------------------------
 !
- CHARACTER(LEN=6),                   INTENT(IN)   :: HPROGRAM     ! Type of program
-LOGICAL, INTENT(OUT) :: OCOUPL_TOPD
- CHARACTER(LEN=15), DIMENSION(JPCAT),INTENT(OUT)  :: HCAT         ! Names of catchments         
-REAL, DIMENSION(JPCAT),INTENT(OUT)               :: PF_PARAM_BV
-REAL, DIMENSION(JPCAT),INTENT(OUT)               :: PC_DEPTH_RATIO_BV 
+ CHARACTER(LEN=6),                    INTENT(IN)  :: HPROGRAM     ! Type of program
+ LOGICAL,                             INTENT(OUT) :: OCOUPL_TOPD
+ CHARACTER(LEN=15), DIMENSION(JPCAT), INTENT(OUT) :: HCAT         ! Names of catchments         
+ REAL,              DIMENSION(JPCAT), INTENT(OUT) :: PF_PARAM_BV
+ REAL,              DIMENSION(JPCAT), INTENT(OUT) :: PC_DEPTH_RATIO_BV 
+ LOGICAL,                             INTENT(OUT) :: ODUMMY_SUBCAT
+ LOGICAL,                             INTENT(OUT) :: OSUBCAT
+ INTEGER,           DIMENSION(JPCAT),      INTENT(OUT) :: KSUBCAT
+ REAL,              DIMENSION(JPCAT,JPCAT),INTENT(OUT) :: PLX 
+ REAL,              DIMENSION(JPCAT,JPCAT),INTENT(OUT) :: PLY
+ CHARACTER(LEN=15), DIMENSION(JPCAT,JPCAT), INTENT(OUT) :: HSUBCAT         ! Names of catchments         
+ CHARACTER(LEN=15), DIMENSION(JPCAT), INTENT(OUT) :: HFILE_SUBCAT!
+ LOGICAL,                             INTENT(OUT) :: OWRITE_SEVERITY_MAPS
 !
 !*    0.2    Declaration of local variables
 !            ------------------------------
 !
- CHARACTER(LEN=15), DIMENSION(JPCAT) :: CCAT
-LOGICAL                           :: LCOUPL_TOPD
+CHARACTER(LEN=15), DIMENSION(JPCAT) :: CCAT
+LOGICAL                           :: LCOUPL_TOPD, LDUMMY_SUBCAT
+LOGICAL                           :: LSUBCAT, LWRITE_SEVERITY_MAPS
 REAL, DIMENSION(JPCAT)            :: XF_PARAM_BV
 REAL, DIMENSION(JPCAT)            :: XC_DEPTH_RATIO_BV
-!
+INTEGER, DIMENSION(JPCAT)         :: NSUBCAT
+REAL, DIMENSION(JPCAT,JPCAT)      :: XLX,XLY
+CHARACTER(LEN=15), DIMENSION(JPCAT,JPCAT) :: CSUBCAT
+CHARACTER(LEN=15), DIMENSION(JPCAT) :: CFILE_SUBCAT
 INTEGER                           :: ILUOUT    ! output listing logical unit
 INTEGER                           :: ILUNAM    ! namelist file logical unit
 LOGICAL                           :: GFOUND    ! flag when namelist is present
@@ -82,7 +92,9 @@ REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !*    0.3    Declaration of namelists
 !  
 !
-NAMELIST/NAM_PGD_TOPD/CCAT, LCOUPL_TOPD, XF_PARAM_BV, XC_DEPTH_RATIO_BV   
+NAMELIST/NAM_PGD_TOPD/CCAT, LCOUPL_TOPD,XF_PARAM_BV, XC_DEPTH_RATIO_BV,  &
+                      LDUMMY_SUBCAT,LSUBCAT,NSUBCAT,XLX,XLY,CFILE_SUBCAT,&
+                      CSUBCAT,LWRITE_SEVERITY_MAPS
 !-------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('READ_NAM_PGD_TOPD',0,ZHOOK_HANDLE)
 !
@@ -91,10 +103,18 @@ IF (LHOOK) CALL DR_HOOK('READ_NAM_PGD_TOPD',0,ZHOOK_HANDLE)
 !
 LCOUPL_TOPD = .FALSE.
 CCAT(:) = '   '
+CSUBCAT(:,:) = '   '
+CFILE_SUBCAT(:) = '   '
 XF_PARAM_BV(:) = 2.5
 XC_DEPTH_RATIO_BV(:) = 1.
+LDUMMY_SUBCAT=.FALSE.
+LSUBCAT=.FALSE.
+NSUBCAT(:)=0
+XLX(:,:)=0.
+XLY(:,:)=0.
+LWRITE_SEVERITY_MAPS=.FALSE.
 !
- CALL GET_LUOUT(HPROGRAM,ILUOUT)
+CALL GET_LUOUT(HPROGRAM,ILUOUT)
 !
 !-------------------------------------------------------------------------------
 !
@@ -102,7 +122,6 @@ XC_DEPTH_RATIO_BV(:) = 1.
 !             -------------------
 !
  CALL OPEN_NAMELIST(HPROGRAM,ILUNAM)
-!CALL OPEN_NAMELIST(HPROGRAM,'SURF  ',ILUNAM)
 !
  CALL POSNAM(ILUNAM,'NAM_PGD_TOPD',GFOUND,ILUOUT)
 IF (GFOUND) READ(UNIT=ILUNAM,NML=NAM_PGD_TOPD)
@@ -121,8 +140,16 @@ NNCAT=COUNT(CCAT(:)/='   ')
 !
 OCOUPL_TOPD = LCOUPL_TOPD
 HCAT(1:NNCAT) = CCAT(1:NNCAT)
+HFILE_SUBCAT(:) = CFILE_SUBCAT(:)
+HSUBCAT(:,:) = CSUBCAT(:,:)
 PF_PARAM_BV(1:NNCAT) = XF_PARAM_BV(1:NNCAT)
 PC_DEPTH_RATIO_BV(1:NNCAT) = XC_DEPTH_RATIO_BV(1:NNCAT)
+ODUMMY_SUBCAT=LDUMMY_SUBCAT
+OSUBCAT=LSUBCAT
+KSUBCAT(:)=NSUBCAT(:)
+PLX(:,:)=XLX(:,:)
+PLY(:,:)=XLY(:,:)
+OWRITE_SEVERITY_MAPS=LWRITE_SEVERITY_MAPS
 !
 IF (LHOOK) CALL DR_HOOK('READ_NAM_PGD_TOPD',1,ZHOOK_HANDLE)
 !-------------------------------------------------------------------------------

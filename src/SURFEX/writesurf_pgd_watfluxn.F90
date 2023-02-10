@@ -41,6 +41,7 @@
 !
 USE MODD_SFX_GRID_n, ONLY : GRID_t
 USE MODD_WATFLUX_n, ONLY : WATFLUX_t
+USE MODD_SURF_PAR, ONLY: LEN_HREC
 !
 USE MODD_DATA_COVER_PAR, ONLY : JPCOVER
 !
@@ -70,7 +71,7 @@ TYPE(WATFLUX_t), INTENT(INOUT) :: W
 !              -------------------------------
 !
 INTEGER           :: IRESP          ! IRESP  : return-code if a problem appears
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
  CHARACTER(LEN=100):: YCOMMENT       ! Comment string
 INTEGER           :: JCOVER         ! loop index
 REAL(KIND=JPRB) :: ZHOOK_HANDLE

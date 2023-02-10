@@ -1,3 +1,4 @@
+###
 ####
 #SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
 #SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
@@ -538,7 +539,7 @@ $(OASIS_KEY) : $(CDFF_INC)
 	@echo '===> check util/make_dir/COMP.err for STDERR logs'
 	cd $(DIR_OASIS)/util/make_dir && \
 	  COUPLE="$(DIR_OASIS)" ARCHDIR="${OASIS_PATH}" CPPFLAGS= LDFLAGS= \
-	  F90="$(F90) -fallow-argument-mismatch" F="$(F90)" F90FLAGS_1="$(F90FLAGS)" \
+	  F90="$(F90)" F="$(F90)" F90FLAGS_1="$(F90FLAGS)" \
 	  INC_NETCDF="$(INC_NETCDF)" LIB_NETCDF="$(LIB_NETCDF)" \
 	    $(MAKE) -j 1 -f TopMakefileOasis3
 	echo '=> Compiling oasis DONE'

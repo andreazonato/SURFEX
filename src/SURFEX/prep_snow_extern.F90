@@ -47,7 +47,7 @@ USE MODD_TYPE_SNOW
 USE MODD_PREP,           ONLY : CINGRID_TYPE, CINTERP_TYPE
 USE MODD_PREP_SNOW,      ONLY : XGRID_SNOW, NGRID_LEVEL
 USE MODD_DATA_COVER_PAR, ONLY : NVEGTYPE
-USE MODD_SURF_PAR,       ONLY : XUNDEF
+USE MODD_SURF_PAR,       ONLY : XUNDEF, LEN_HREC
 USE MODD_CSTS,           ONLY : XTT
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
@@ -99,7 +99,7 @@ REAL, DIMENSION(:), ALLOCATABLE    :: ZMASK
 INTEGER, DIMENSION(:), ALLOCATABLE :: IMASK_P
 !
 LOGICAL                           :: GTOWN          ! town variables written in the file
-CHARACTER(LEN=12)                 :: YRECFM         ! record name
+CHARACTER(LEN=LEN_HREC)                 :: YRECFM         ! record name
 INTEGER                           :: IRESP          ! error return code
 INTEGER                           :: IVERSION_PGD, IVERSION_PREP       ! SURFEX version
 LOGICAL                           :: GOLD_NAME      ! old name flag 

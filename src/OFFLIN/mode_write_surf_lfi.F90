@@ -38,6 +38,7 @@ CONTAINS
 !
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILEOUT_LFI, CLUOUT_LFI
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_FMWRIT
@@ -52,7 +53,7 @@ IMPLICIT NONE
 !
 !
 !
- CHARACTER(LEN=12),  INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN) :: HREC     ! name of the article to be read
 REAL,               INTENT(IN) :: PFIELD   ! the real scalar to be read
 INTEGER,            INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100), INTENT(IN) :: HCOMMENT ! comment string
@@ -87,6 +88,7 @@ END SUBROUTINE WRITE_SURFX0_LFI
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILEOUT_LFI, CLUOUT_LFI, &
                                     LMNH_COMPATIBLE, NIU, NIB, NIE, NJU, NJB, NJE
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_FMWRIT
@@ -101,7 +103,7 @@ IMPLICIT NONE
 !
 !
 !
- CHARACTER(LEN=12),  INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN) :: HREC     ! name of the article to be read
 INTEGER,            INTENT(IN) :: KFIELD   ! the integer to be read
 INTEGER,            INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100), INTENT(IN) :: HCOMMENT ! comment string
@@ -146,6 +148,7 @@ END SUBROUTINE WRITE_SURFN0_LFI
 !!****  * - routine to write a logical
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILEOUT_LFI, CLUOUT_LFI
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_FMWRIT
@@ -160,7 +163,7 @@ IMPLICIT NONE
 !
 !
 !
- CHARACTER(LEN=12),  INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN) :: HREC     ! name of the article to be read
 LOGICAL,            INTENT(IN) :: OFIELD   ! array containing the data field
 INTEGER,            INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100), INTENT(IN) :: HCOMMENT ! comment string
@@ -195,6 +198,8 @@ END SUBROUTINE WRITE_SURFL0_LFI
 !!****  * - routine to write a character
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILEOUT_LFI, CLUOUT_LFI, LMNH_COMPATIBLE, LCARTESIAN
+USE MODD_DATA_COVER_PAR,     ONLY : NCAR_FILES
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_FMWRIT
@@ -209,10 +214,10 @@ IMPLICIT NONE
 !
 !
 !
- CHARACTER(LEN=12),  INTENT(IN)  :: HREC      ! name of the article to be read
- CHARACTER(LEN=40),  INTENT(IN)  :: HFIELD    ! the integer to be read
-INTEGER,            INTENT(OUT) :: KRESP     ! KRESP  : return-code if a problem appears
- CHARACTER(LEN=100), INTENT(IN)  :: HCOMMENT  ! comment string
+ CHARACTER(LEN=LEN_HREC),         INTENT(IN)  :: HREC      ! name of the article to be read
+ CHARACTER(LEN=NCAR_FILES), INTENT(IN)  :: HFIELD    ! the integer to be read
+INTEGER,                    INTENT(OUT) :: KRESP     ! KRESP  : return-code if a problem appears
+ CHARACTER(LEN=100),        INTENT(IN)  :: HCOMMENT  ! comment string
 !
 !*      0.2   Declarations of local variables
 !
@@ -253,6 +258,7 @@ USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, XTIME_NPIO_WRITE
 !
 USE MODD_IO_SURF_LFI, ONLY : CFILEOUT_LFI, CLUOUT_LFI, NMASK, NFULL, &
                              LMNH_COMPATIBLE, NIU, NIB, NIE, NJU, NJB, NJE
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_FMWRIT
@@ -273,7 +279,7 @@ INCLUDE "mpif.h"
 !
 !
 !
- CHARACTER(LEN=12),   INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),   INTENT(IN) :: HREC     ! name of the article to be read
 REAL, DIMENSION(:),  INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,             INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),  INTENT(IN) :: HCOMMENT ! comment string
@@ -373,12 +379,13 @@ CONTAINS
 !     #############################################################
 !
 !!****  * - routine to fill a write 2D array for the externalised surface 
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),        INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),        INTENT(IN) :: HREC     ! name of the article to be read
  CHARACTER(LEN=20),        INTENT(IN) :: HREC2    ! name of the article to be read
 REAL, DIMENSION(:),       INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,                  INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
@@ -442,6 +449,7 @@ USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, XTIME_NPIO_WRITE
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILEOUT_LFI, CLUOUT_LFI, NMASK, NFULL, &
                                     LMNH_COMPATIBLE, NIU, NIB, NIE, NJU, NJB, NJE
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_FMWRIT
@@ -462,7 +470,7 @@ INCLUDE "mpif.h"
 !
 !
 !
- CHARACTER(LEN=12),        INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),        INTENT(IN) :: HREC     ! name of the article to be read
 REAL, DIMENSION(:,:),     INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,                  INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),       INTENT(IN) :: HCOMMENT ! comment string
@@ -531,12 +539,13 @@ CONTAINS
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),        INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),        INTENT(IN) :: HREC     ! name of the article to be read
 REAL, DIMENSION(:,:),     INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,                  INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),       INTENT(IN) :: HCOMMENT ! comment string
@@ -587,6 +596,7 @@ USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, XTIME_NPIO_WRITE
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILEOUT_LFI, CLUOUT_LFI, NMASK, NFULL, &
                                     LMNH_COMPATIBLE, NIU, NIB, NIE, NJU, NJB, NJE
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_FMWRIT
@@ -607,7 +617,7 @@ INCLUDE "mpif.h"
 !
 !
 !
- CHARACTER(LEN=12),        INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),        INTENT(IN) :: HREC     ! name of the article to be read
 REAL, DIMENSION(:,:,:),     INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,                  INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),       INTENT(IN) :: HCOMMENT ! comment string
@@ -676,6 +686,7 @@ CONTAINS
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_ABOR1_SFX
 !
@@ -683,7 +694,7 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),        INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),        INTENT(IN) :: HREC     ! name of the article to be read
 REAL, DIMENSION(:,:,:),     INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,                  INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),       INTENT(IN) :: HCOMMENT ! comment string
@@ -733,6 +744,7 @@ END SUBROUTINE WRITE_SURFX3_LFI
 USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, XTIME_NPIO_WRITE
 !
 USE MODD_IO_SURF_LFI, ONLY : CFILEOUT_LFI, CLUOUT_LFI, NMASK, NFULL
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_FMWRIT
@@ -752,7 +764,7 @@ INCLUDE "mpif.h"
 !
 !
 !
- CHARACTER(LEN=12),      INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),      INTENT(IN) :: HREC     ! name of the article to be read
 INTEGER, DIMENSION(:),  INTENT(IN) :: KFIELD   ! the integer to be read
 INTEGER,                INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),     INTENT(IN) :: HCOMMENT ! comment string
@@ -816,6 +828,7 @@ END SUBROUTINE WRITE_SURFN1_LFI
 USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, XTIME_NPIO_WRITE
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILEOUT_LFI, CLUOUT_LFI
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_GET_LUOUT
@@ -836,7 +849,7 @@ INCLUDE "mpif.h"
 !
 !
 !
- CHARACTER(LEN=12),      INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),      INTENT(IN) :: HREC     ! name of the article to be read
 LOGICAL, DIMENSION(:),  INTENT(IN) :: OFIELD   ! array containing the data field
 INTEGER,                INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),     INTENT(IN) :: HCOMMENT ! comment string
@@ -898,6 +911,7 @@ END SUBROUTINE WRITE_SURFL1_LFI
 !
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILEOUT_LFI, CLUOUT_LFI
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_GET_SURF_UNDEF
@@ -913,7 +927,7 @@ IMPLICIT NONE
 !
 !
 !
- CHARACTER(LEN=12),  INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN)  :: HREC     ! name of the article to be read
 INTEGER,            INTENT(IN)  :: KYEAR    ! year
 INTEGER,            INTENT(IN)  :: KMONTH   ! month
 INTEGER,            INTENT(IN)  :: KDAY     ! day
@@ -924,7 +938,7 @@ INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem 
 !*      0.2   Declarations of local variables
 !
 LOGICAL :: GFOUND
- CHARACTER(LEN=12)     :: YREC     ! Name of the article to be written
+ CHARACTER(LEN=LEN_HREC)     :: YREC     ! Name of the article to be written
 INTEGER, DIMENSION(3) :: ITDATE
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
@@ -966,6 +980,7 @@ END SUBROUTINE WRITE_SURFT0_LFI
 USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, XTIME_NPIO_WRITE
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILEOUT_LFI, CLUOUT_LFI
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_FMWRIT
@@ -984,7 +999,7 @@ INCLUDE "mpif.h"
 !
 !
 !
- CHARACTER(LEN=12),    INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),    INTENT(IN)  :: HREC     ! name of the article to be read
 INTEGER, DIMENSION(:), INTENT(IN) :: KYEAR    ! year
 INTEGER, DIMENSION(:), INTENT(IN) :: KMONTH   ! month
 INTEGER, DIMENSION(:), INTENT(IN) :: KDAY     ! day
@@ -995,7 +1010,7 @@ INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem 
 !*      0.2   Declarations of local variables
 !
 LOGICAL :: GFOUND
- CHARACTER(LEN=12) :: YREC     ! Name of the article to be written
+ CHARACTER(LEN=LEN_HREC) :: YREC     ! Name of the article to be written
 INTEGER, DIMENSION(3,SIZE(KYEAR)) :: ITDATE
 DOUBLE PRECISION   :: XTIME0
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
@@ -1053,6 +1068,7 @@ END SUBROUTINE WRITE_SURFT1_LFI
 USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, XTIME_NPIO_WRITE
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILEOUT_LFI, CLUOUT_LFI
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_IO_BUFF
 USE MODI_FMWRIT
@@ -1071,7 +1087,7 @@ INCLUDE "mpif.h"
 !
 !
 !
- CHARACTER(LEN=12),    INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),    INTENT(IN)  :: HREC     ! name of the article to be read
 INTEGER, DIMENSION(:,:), INTENT(IN) :: KYEAR    ! year
 INTEGER, DIMENSION(:,:), INTENT(IN) :: KMONTH   ! month
 INTEGER, DIMENSION(:,:), INTENT(IN) :: KDAY     ! day
@@ -1082,7 +1098,7 @@ INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem 
 !*      0.2   Declarations of local variables
 !
 LOGICAL :: GFOUND
- CHARACTER(LEN=12) :: YREC     ! Name of the article to be written
+ CHARACTER(LEN=LEN_HREC) :: YREC     ! Name of the article to be written
 DOUBLE PRECISION   :: XTIME0
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !

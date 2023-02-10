@@ -76,6 +76,7 @@ END SUBROUTINE GET_COMMENT
 !!****  *WRITEX0* - routine to read a real scalar
 !
 USE MODD_IO_SURF_OL, ONLY : NID_NC, LDEF
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_DEF_VAR_NETCDF
 !
@@ -90,7 +91,7 @@ IMPLICIT NONE
 !*      0.1   Declarations of arguments
 !
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
- CHARACTER(LEN=12),  INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN)  :: HREC     ! name of the article to be read
 REAL,               INTENT(IN)  :: PFIELD   ! the real scalar to be read
 INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100), INTENT(IN)  :: HCOMMENT
@@ -150,6 +151,7 @@ END SUBROUTINE WRITE_SURFX0_OL
 !!****  *WRITEN0* - routine to read an integer
 !
 USE MODD_IO_SURF_OL, ONLY : NID_NC, LDEF
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_DEF_VAR_NETCDF
 !
@@ -164,7 +166,7 @@ IMPLICIT NONE
 !*      0.1   Declarations of arguments
 !
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
- CHARACTER(LEN=12),  INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN)  :: HREC     ! name of the article to be read
 INTEGER,            INTENT(IN)  :: KFIELD   ! the integer scalar to be read
 INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100), INTENT(IN)  :: HCOMMENT
@@ -222,7 +224,9 @@ END SUBROUTINE WRITE_SURFN0_OL
 !
 !!****  *WRITEC0* - routine to read a STRING
 !
-USE MODD_IO_SURF_OL, ONLY : NID_NC, LDEF
+USE MODD_IO_SURF_OL,         ONLY : NID_NC, LDEF
+USE MODD_DATA_COVER_PAR,     ONLY : NCAR_FILES
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_DEF_VAR_NETCDF
 !
@@ -236,11 +240,11 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
- CHARACTER(LEN=12),  INTENT(IN)  :: HREC     ! name of the article to be read
- CHARACTER(LEN=40),  INTENT(IN)  :: HFIELD   ! the integer scalar to be read
-INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem appears
- CHARACTER(LEN=100), INTENT(IN)  :: HCOMMENT
+ CHARACTER(LEN=*), DIMENSION(:), INTENT(IN)  :: HSELECT
+ CHARACTER(LEN=LEN_HREC),              INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=NCAR_FILES),      INTENT(IN)  :: HFIELD   ! the integer scalar to be read
+INTEGER,                         INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem appears
+ CHARACTER(LEN=100),             INTENT(IN)  :: HCOMMENT
 !
 !*      0.2   Declarations of local variables
 !
@@ -299,6 +303,7 @@ END SUBROUTINE WRITE_SURFC0_OL
 !!****  *WRITEL0* - routine to read a logical
 !    
 USE MODD_IO_SURF_OL, ONLY : NID_NC, LDEF
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_DEF_VAR_NETCDF
 USE MODI_HANDLE_ERR
@@ -314,7 +319,7 @@ IMPLICIT NONE
 !*      0.1   Declarations of arguments
 !
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
- CHARACTER(LEN=12),   INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),   INTENT(IN) :: HREC     ! name of the article to be read
 LOGICAL,             INTENT(IN) :: OFIELD   ! array containing the data field
 INTEGER,             INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),  INTENT(IN) :: HCOMMENT
@@ -441,6 +446,7 @@ USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, NCOMM, NPROC, XTIME_NPIO_WRITE, &
 !
 USE MODD_IO_SURF_OL, ONLY: NID_NC, LDEF, LMASK, NMASK, NMASK_IGN, XSTART, &
                            XSTRIDE, LPARTW, XSTARTW, XCOUNTW
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_DEF_VAR_NETCDF
 !
@@ -462,7 +468,7 @@ INCLUDE "mpif.h"
 !
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
 !
- CHARACTER(LEN=12),   INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),   INTENT(IN) :: HREC     ! name of the article to be read
 REAL, DIMENSION(:),  INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,             INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),  INTENT(IN) :: HCOMMENT
@@ -720,6 +726,7 @@ USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, NCOMM, NPROC, XTIME_NPIO_WRITE, &
 !
 USE MODD_IO_SURF_OL, ONLY: LMASK, NMASK, NMASK_IGN, XSTART, XSTRIDE, &
                            LPARTW, XSTARTW, XCOUNTW, NID_NC, LDEF 
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_DEF_VAR_NETCDF
 !
@@ -739,7 +746,7 @@ INCLUDE "mpif.h"
 !
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
 !
- CHARACTER(LEN=12),    INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),    INTENT(IN) :: HREC     ! name of the article to be read
 REAL, DIMENSION(:,:), INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,              INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),   INTENT(IN) :: HCOMMENT
@@ -866,8 +873,9 @@ ELSE
       !----------------------------
       !
       IRET(1)=NF90_INQ_VARID   (IFILE_ID,HREC,IVAR_ID)
-      IRET(2)=NF90_INQUIRE_VARIABLE(IFILE_ID,IVAR_ID,NDIMS=INDIMS) 
-      IRET(3)=NF90_INQUIRE_VARIABLE(IFILE_ID,IVAR_ID,DIMIDS=IDIMIDS(1:INDIMS))  
+      IRET(2)=NF90_INQUIRE_VARIABLE(IFILE_ID,IVAR_ID,NDIMS=INDIMS)
+      IRET(3)=NF90_INQUIRE_VARIABLE(IFILE_ID,IVAR_ID,DIMIDS=IDIMIDS(1:INDIMS))
+      !
       DO JDIM=1,INDIMS
         JRET=NF90_INQUIRE_DIMENSION(IFILE_ID,IDIMIDS(JDIM),LEN=IDIMLEN(JDIM))
         IF (JRET.NE.NF90_NOERR) KRESP=1
@@ -951,7 +959,7 @@ IF(.NOT.ALLOCATED(NMASK_IGN))THEN
     CALL GATHER_AND_WRITE_MPI(PFIELD,ZTAB2D(:,1:SIZE(PFIELD,2)))
   ENDIF
 ELSE
-  !ign grid 
+  !ign grid
   IF (LMASK) THEN
     CALL GATHER_AND_WRITE_MPI(PFIELD,ZWORK_IGN(1:SIZE(NMASK_IGN),:),NMASK)
   ELSE 
@@ -1014,6 +1022,7 @@ USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, NCOMM, NPROC, XTIME_NPIO_WRITE, &
 !
 USE MODD_IO_SURF_OL, ONLY: LMASK, NMASK, NMASK_IGN, XSTART, XSTRIDE, &
                            LPARTW, XSTARTW, XCOUNTW, NID_NC, LDEF 
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_DEF_VAR_NETCDF
 !
@@ -1035,7 +1044,7 @@ INCLUDE "mpif.h"
 !
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
 !
- CHARACTER(LEN=12),    INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),    INTENT(IN) :: HREC     ! name of the article to be read
 REAL, DIMENSION(:,:,:), INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,              INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),   INTENT(IN) :: HCOMMENT
@@ -1304,6 +1313,7 @@ END SUBROUTINE WRITE_SURFX3_OL
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE NETCDF
 !
@@ -1312,7 +1322,7 @@ IMPLICIT NONE
 !*      0.1   Declarations of arguments
 !
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
- CHARACTER(LEN=12),      INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),      INTENT(IN)  :: HREC     ! name of the article to be read
 INTEGER, DIMENSION(:),  INTENT(IN)  :: KFIELD   ! the integer scalar to be read
 INTEGER,                INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),     INTENT(IN)  :: HCOMMENT
@@ -1508,6 +1518,7 @@ END SUBROUTINE WRITE_SURFL1_OL
 USE MODD_TYPE_DATE_SURF
 !
 USE MODD_IO_SURF_OL, ONLY : NID_NC, LDEF
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_DEF_VAR_NETCDF
 !
@@ -1522,7 +1533,7 @@ IMPLICIT NONE
 !*      0.1   Declarations of arguments
 !
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
- CHARACTER(LEN=12),  INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN)  :: HREC     ! name of the article to be read
 INTEGER,            INTENT(IN)  :: KYEAR    ! year
 INTEGER,            INTENT(IN)  :: KMONTH   ! month
 INTEGER,            INTENT(IN)  :: KDAY     ! day
@@ -1536,7 +1547,7 @@ INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem 
  CHARACTER(LEN=100), DIMENSION(1) :: YATT_TITLE, YATT
 INTEGER, DIMENSION(0) :: IDIMS
 !
- CHARACTER(LEN=12) :: YRECFM    ! Name of the article to be written
+ CHARACTER(LEN=LEN_HREC) :: YRECFM    ! Name of the article to be written
 INTEGER :: IFILE_ID, IVAR_ID, JRET, JWRK
 INTEGER,DIMENSION(8) :: IRET
 REAL(KIND=JPRB) :: ZHOOK_HANDLE

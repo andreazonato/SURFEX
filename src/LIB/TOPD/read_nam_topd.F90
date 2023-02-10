@@ -4,12 +4,11 @@
 !SFX_LIC for details. version 1.
 !----------------------------------------------------------------------------!
 !     ##############################################################
-       SUBROUTINE READ_NAM_TOPD(HPROGRAM,&
-                                OBUDGET_TOPD,KNB_TOPD,&
-                                OSTOCK_TOPD,&
-                                KNB_STOCK,KNB_RESTART,&
-                                KFREQ_MAPS_WG,KFREQ_MAPS_ASAT,KFREQ_MAPS_RUNOFF,&
-                                PSPEEDR,PSPEEDG,PSPEEDH,PQINIT,PRTOP_D2)
+       SUBROUTINE READ_NAM_TOPD(HPROGRAM,OBUDGET_TOPD,KNB_TOPD,OSTOCK_TOPD,&
+                                KNB_STOCK,KNB_RESTART,KFREQ_MAPS_WG, &
+                                KFREQ_MAPS_ASAT,KFREQ_MAPS_RUNOFF,PSPEEDR, &
+                                PSPEEDG,PSPEEDH,OSPEEDR_VAR,PQINIT,PRTOP_D2,&
+                                OPERT_PARAM, OPERT_INIT)
 !     ##############################################################
 !
 !!**** *READ_NAM TOPD* reads namelist NAM_TOPD
@@ -61,7 +60,7 @@ USE MODI_GET_LUOUT
 USE MODI_OPEN_NAMELIST
 USE MODI_CLOSE_NAMELIST
 !
-USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
+USE YOMHOOK   ,ONLY : LHOOK, DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
 !
 IMPLICIT NONE
@@ -81,8 +80,11 @@ INTEGER,                            INTENT(OUT)  :: KFREQ_MAPS_RUNOFF
 REAL, DIMENSION(JPCAT),INTENT(OUT)               :: PSPEEDR ! River speed
 REAL, DIMENSION(JPCAT),INTENT(OUT)               :: PSPEEDG ! Ground speed
 REAL, DIMENSION(JPCAT),INTENT(OUT)               :: PSPEEDH ! Hillslope speed
+LOGICAL,                            INTENT(OUT)  :: OSPEEDR_VAR  ! T to modulate river speed according to the discharge
 REAL, DIMENSION(JPCAT),INTENT(OUT)               :: PQINIT  ! Initial discharge at catchments outlet
 REAL, DIMENSION(JPCAT),INTENT(OUT)               :: PRTOP_D2
+LOGICAL,                            INTENT(OUT)  :: OPERT_PARAM ! T to introduce perturbation in ISBA-TOP parameters
+LOGICAL,                            INTENT(OUT)  :: OPERT_INIT  ! T to introduce perturbation in ISBA-TOP initial soil moisture
 !
 !*    0.2    Declaration of local variables
 !            ------------------------------
@@ -98,8 +100,11 @@ INTEGER                           :: NNB_STP_RESTART
 REAL, DIMENSION(JPCAT)            :: XSPEEDR
 REAL, DIMENSION(JPCAT)            :: XSPEEDG
 REAL, DIMENSION(JPCAT)            :: XSPEEDH
+LOGICAL                           :: LSPEEDR_VAR
 REAL, DIMENSION(JPCAT)            :: XQINIT
 REAL, DIMENSION(JPCAT)            :: XRTOP_D2
+LOGICAL                           :: LPERT_PARAM
+LOGICAL                           :: LPERT_INIT
 !
 INTEGER                           :: ILUOUT    ! output listing logical unit
 INTEGER                           :: ILUNAM    ! namelist file logical unit
@@ -111,7 +116,9 @@ REAL(KIND=JPRB) :: ZHOOK_HANDLE
 NAMELIST/NAM_TOPD/LBUDGET_TOPD, LSTOCK_TOPD, NNB_TOPD, &
                   NFREQ_MAPS_WG, NFREQ_MAPS_ASAT, NFREQ_MAPS_RUNOFF,&
                   NNB_STP_STOCK, NNB_STP_RESTART, &
-                  XSPEEDR, XSPEEDG, XSPEEDH, XQINIT, XRTOP_D2
+                  XSPEEDR, XSPEEDG, XSPEEDH, LSPEEDR_VAR,&
+                  XQINIT, XRTOP_D2,&
+                  LPERT_PARAM, LPERT_INIT
 !-------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('READ_NAM_TOPD',0,ZHOOK_HANDLE)
 !
@@ -126,11 +133,14 @@ NFREQ_MAPS_ASAT = 0
 NFREQ_MAPS_RUNOFF = 0
 NNB_STP_STOCK = 1
 NNB_STP_RESTART = 1
-XSPEEDR(:) = 3.0 ! default value of river speed (adapted for Cevennes zone)
-XSPEEDG(:) = 0.3 ! default value of speed in the ground
-XSPEEDH(:) = 0.3 ! default value of hillspeed
+XSPEEDR(:) = 1.0 ! default value of river speed 
+XSPEEDG(:) = 0.1 ! default value of speed in the ground
+XSPEEDH(:) = 0.1 ! default value of hillspeed
+LSPEEDR_VAR = .FALSE.
 XQINIT(:) = 0.
 XRTOP_D2(:) = 1.
+LPERT_PARAM = .FALSE.
+LPERT_INIT  = .FALSE.
 !
  CALL GET_LUOUT(HPROGRAM,ILUOUT)
 !
@@ -162,20 +172,27 @@ KFREQ_MAPS_RUNOFF = NFREQ_MAPS_RUNOFF
 PSPEEDR(1:NNCAT) = XSPEEDR(1:NNCAT)
 PSPEEDG(1:NNCAT) = XSPEEDG(1:NNCAT)
 WHERE(XSPEEDH(1:NNCAT)/=0.3)
- PSPEEDH(1:NNCAT) = XSPEEDH(1:NNCAT)
+  PSPEEDH(1:NNCAT) = XSPEEDH(1:NNCAT)
 ELSEWHERE
- PSPEEDH(1:NNCAT) = XSPEEDR(1:NNCAT)/10.
+  PSPEEDH(1:NNCAT) = XSPEEDR(1:NNCAT)/10.
 ENDWHERE
+OSPEEDR_VAR = LSPEEDR_VAR
 PQINIT(1:NNCAT) = XQINIT(1:NNCAT)
 PRTOP_D2(1:NNCAT) = XRTOP_D2(1:NNCAT)
+OPERT_PARAM = LPERT_PARAM
+OPERT_INIT  = LPERT_INIT
 !
-WRITE(ILUOUT,*) 'NAM_TOPD:'
-WRITE(ILUOUT,*) 'LBUDGET ',LBUDGET_TOPD
-WRITE(ILUOUT,*) 'NNB_TOP',NNB_TOPD
-WRITE(ILUOUT,*) 'LSTOCK',LSTOCK_TOPD
-WRITE(ILUOUT,*) 'NNB_RESTART,NNB_STOCK',NNB_STP_RESTART,NNB_STP_STOCK
-WRITE(ILUOUT,*) 'NFREQ_MAPS_WG,NFREQ_MAPS_ASAT',NFREQ_MAPS_WG,NFREQ_MAPS_ASAT
-WRITE(ILUOUT,*) 'NFREQ_MAPS_RUNOFF',NFREQ_MAPS_RUNOFF
+WRITE(ILUOUT,*) 'NAM_TOPD'
+WRITE(ILUOUT,*) 'LBUDGET = ',LBUDGET_TOPD
+WRITE(ILUOUT,*) 'NNB_TOP = ',NNB_TOPD
+WRITE(ILUOUT,*) 'LSTOCK = ',LSTOCK_TOPD
+WRITE(ILUOUT,*) 'NNB_RESTART,NNB_STOCK = ',NNB_STP_RESTART,NNB_STP_STOCK
+WRITE(ILUOUT,*) 'NFREQ_MAPS_WG,NFREQ_MAPS_ASAT = ',NFREQ_MAPS_WG,NFREQ_MAPS_ASAT
+WRITE(ILUOUT,*) 'NFREQ_MAPS_RUNOFF = ',NFREQ_MAPS_RUNOFF
+WRITE(ILUOUT,*) 'XSPEEDR = ',XSPEEDR
+WRITE(ILUOUT,*) 'LSPEEDR_VAR = ',LSPEEDR_VAR
+WRITE(ILUOUT,*) 'LPERT_PARAM = ',LPERT_PARAM
+WRITE(ILUOUT,*) 'LPERT_INIT  = ',LPERT_INIT 
 !
 IF (LHOOK) CALL DR_HOOK('READ_NAM_TOPD',1,ZHOOK_HANDLE)
 !-------------------------------------------------------------------------------

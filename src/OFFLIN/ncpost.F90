@@ -34,7 +34,7 @@ USE MODD_OFF_SURFEX_n
         INTEGER, ALLOCATABLE, DIMENSION(:)::   IWRK2
         CHARACTER(LEN=50)                 ::   YCOMMENT
         CHARACTER(LEN=50)                 ::   NOM_ARTICLE
-        CHARACTER(LEN=12)                 ::   HREC
+        CHARACTER(LEN=LEN_HREC)                 ::   HREC
         CHARACTER(LEN=1)                  ::   PATCHFLAG
         CHARACTER(LEN=2)                  ::   YPAS,YLVL
         CHARACTER(LEN=10)                 ::   CGRID_TYPE
@@ -197,7 +197,7 @@ USE MODD_OFF_SURFEX_n
         CONTAINS
 
         SUBROUTINE ERR_STOP(HREC,CFILEIN,NLUOUT)
-        CHARACTER(LEN=12)   ::   HREC
+        CHARACTER(LEN=LEN_HREC)   ::   HREC
         CHARACTER(LEN=*)    ::   CFILEIN
         INTEGER             ::   NLUOUT
         REAL(KIND=JPRB) :: ZHOOK_HANDLE

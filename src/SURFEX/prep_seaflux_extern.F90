@@ -18,7 +18,7 @@ USE MODI_READ_SURF
 USE MODI_OPEN_AUX_IO_SURF
 USE MODI_CLOSE_AUX_IO_SURF
 !
-USE MODD_SURF_PAR, ONLY : XUNDEF
+USE MODD_SURF_PAR, ONLY : XUNDEF, LEN_HREC
 USE MODD_PREP,       ONLY : CINGRID_TYPE, CINTERP_TYPE
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
@@ -43,7 +43,7 @@ REAL,DIMENSION(:,:), POINTER    :: PFIELD    ! field to interpolate horizontally
 !
 !
 REAL, DIMENSION(:), ALLOCATABLE :: ZMASK
-CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 INTEGER           :: IRESP          ! reading return code
 !
 INTEGER           :: INI            ! total 1D dimension

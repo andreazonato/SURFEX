@@ -3,10 +3,9 @@
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 !     #########
-      SUBROUTINE HYDRO(IO, KK, PK, PEK, AG, DEK, DMK, OMEB, PTSTEP, PVEG, &
-                       PWRMAX, PSNOW_THRUFAL, PEVAPCOR, PSUBVCOR, PSOILHCAPZ, &
-                       PF2WGHT, PF2, PPS, PIRRIG_GR, PDELHEATG, PDELHEATG_SFC,&
-                       PDELPHASEG, PDELPHASEG_SFC               )
+      SUBROUTINE HYDRO(IO, KK, PK, PEK, AG, DEK, DMK, OMEB, PTSTEP, PVEG,      &
+                       PWRMAX, PSNOW_THRUFAL, PEVAPCOR, PSUBVCOR,PLETR_HVEG,PSOILHCAPZ,  &
+                       PF2WGHT, PF2, PPS, PIRRIG_GR, NPAR_VEG_IRR_USE)
 !     #####################################################################
 !
 !!****  *HYDRO*  
@@ -72,34 +71,37 @@
 !!                                         water table / surface coupling
 !!                  02/2013  (C. de Munck) specified irrigation rate of ground added
 !!                  10/2014  (A. Boone)    MEB added
-!!                  07/15    (B. Decharme) Numerical adjustement for F2 soilstress function
-!!                  03/16    (B. Decharme) Limit flood infiltration
+!!                  07/2015  (B. Decharme) Numerical adjustement for F2 soilstress function
+!!                  03/2016  (B. Decharme) Limit flood infiltration
+!!                  01/2018  (J.Etchanchu) Different types of irrigation taken into account
+!!                  02/2019  (A. Druel)    Adapt the code to be compatible with new irrigation version (new patches)
+!!                                          and remove the old version
+!!
 !-------------------------------------------------------------------------------
 !
 !*       0.     DECLARATIONS
 !               ------------
 !
-USE MODD_ISBA_OPTIONS_n, ONLY : ISBA_OPTIONS_t
-USE MODD_ISBA_n, ONLY : ISBA_K_t, ISBA_P_t, ISBA_PE_t
-USE MODD_AGRI_n, ONLY : AGRI_t
+USE MODD_ISBA_OPTIONS_n,   ONLY : ISBA_OPTIONS_t
+USE MODD_ISBA_n,           ONLY : ISBA_K_t, ISBA_P_t, ISBA_PE_t
+USE MODD_AGRI_n,           ONLY : AGRI_t
 USE MODD_DIAG_EVAP_ISBA_n, ONLY : DIAG_EVAP_ISBA_t
 USE MODD_DIAG_MISC_ISBA_n, ONLY : DIAG_MISC_ISBA_t
+USE MODD_AGRI,             ONLY : LIRRIGMODE 
 !
-USE MODD_CSTS,      ONLY : XRHOLW, XDAY, XTT, XLSTT, XLMTT
-USE MODD_ISBA_PAR,  ONLY : XWGMIN, XDENOM_MIN
-USE MODD_SURF_PAR,  ONLY : XUNDEF, NUNDEF
+USE MODD_CSTS,             ONLY : XRHOLW, XTT, XLSTT, XLMTT
+USE MODD_ISBA_PAR,         ONLY : XWGMIN, XDENOM_MIN
+USE MODD_SURF_PAR,         ONLY : XUNDEF, NUNDEF
 !
-#ifdef TOPD
-USE MODD_COUPLING_TOPD, ONLY : LCOUPL_TOPD, XAS_NATURE, XATOP, XRUNOFF_TOP, NMASKT_PATCH
-#endif
+USE MODN_IO_OFFLINE,       ONLY : XTSTEP_SURF    ! time step of the surface
 !
 USE MODI_HYDRO_VEG
 USE MODI_HYDRO_SNOW
 USE MODI_HYDRO_SOIL
-USE MODI_HYDRO_SOILDIF                                          
+USE MODI_HYDRO_SOILDIF
 USE MODI_HYDRO_SGH
-USE MODI_ICE_SOILDIF              
-USE MODI_ICE_SOILFR              
+USE MODI_ICE_SOILDIF
+USE MODI_ICE_SOILFR
 !
 USE MODE_THERMOS
 !
@@ -111,17 +113,17 @@ IMPLICIT NONE
 !*      0.1    declarations of arguments
 !
 !
-TYPE(ISBA_OPTIONS_t), INTENT(INOUT) :: IO
-TYPE(ISBA_K_t), INTENT(INOUT) :: KK
-TYPE(ISBA_P_t), INTENT(INOUT) :: PK
-TYPE(ISBA_PE_t), INTENT(INOUT) :: PEK
-TYPE(AGRI_t), INTENT(INOUT) :: AG
+TYPE(ISBA_OPTIONS_t),   INTENT(INOUT) :: IO
+TYPE(ISBA_K_t),         INTENT(INOUT) :: KK
+TYPE(ISBA_P_t),         INTENT(INOUT) :: PK
+TYPE(ISBA_PE_t),        INTENT(INOUT) :: PEK
+TYPE(AGRI_t),           INTENT(INOUT) :: AG
 TYPE(DIAG_EVAP_ISBA_t), INTENT(INOUT) :: DEK
 TYPE(DIAG_MISC_ISBA_t), INTENT(INOUT) :: DMK
 !
-LOGICAL, INTENT(IN)                :: OMEB   ! True  = patch with multi-energy balance 
+LOGICAL, INTENT(IN)               :: OMEB   ! True  = patch with multi-energy balance 
 !                                            ! False = patch with classical (composite) ISBA
-REAL, INTENT(IN)                    :: PTSTEP
+REAL, INTENT(IN)                  :: PTSTEP
 !                                      timestep of the integration
 !
 REAL, DIMENSION(:), INTENT(IN)    :: PVEG, PWRMAX
@@ -130,13 +132,15 @@ REAL, DIMENSION(:), INTENT(IN)    :: PVEG, PWRMAX
 !                                               in the vegetation canopy
 !
 REAL, DIMENSION(:), INTENT(IN)    :: PSNOW_THRUFAL, PEVAPCOR, PSUBVCOR
-!                                    PSNOW_THRUFAL = rate that liquid water leaves snow pack: 
+!                                    PSNOW_THRUFAL = rate that liquid water leaves snowpack : 
 !                                               *ISBA-ES* [kg/(m2 s)]
 !                                    PEVAPCOR = correction if evaporation from snow exceeds
 !                                               actual amount on the surface [kg/(m2 s)]
 !                                    PSUBVCOR = correction if sublimation from snow intercepted 
 !                                               on the MEB canopy exceeds snow available as it 
 !                                               disappears [kg/(m2 s)]
+REAL, DIMENSION(:,:), INTENT(IN)  :: PLETR_HVEG
+!                                    PLETR_HVEG : when simplified HVEG scheme is used, term of transpiration from high vegetation
 !
 REAL, DIMENSION(:), INTENT(IN)    :: PPS, PF2                                       
 !                                    PPS  = surface pressure (Pa)
@@ -145,48 +149,54 @@ REAL, DIMENSION(:), INTENT(IN)    :: PPS, PF2
 REAL, DIMENSION(:,:), INTENT(IN)  :: PF2WGHT
 !                                    PF2WGHT   = water stress factor (profile) (-)
 !
-REAL, DIMENSION(:,:), INTENT(IN) :: PSOILHCAPZ
-!                                   PSOILHCAPZ = ISBA-DF Soil heat capacity profile [J/(m3 K)]
+REAL, DIMENSION(:,:), INTENT(IN)  :: PSOILHCAPZ
+!                                    PSOILHCAPZ = ISBA-DF Soil heat capacity profile [J/(m3 K)]
 !
-REAL, DIMENSION(:), INTENT(INOUT) :: PDELHEATG, PDELHEATG_SFC
-!                                      PDELHEATG_SFC = change in heat storage of the surface soil layer over the current time step (W m-2)
-!                                      PDELHEATG     = change in heat storage of the entire soil column over the current time step (W m-2)
+REAL, DIMENSION(:),INTENT(IN)     :: PIRRIG_GR ! ground irrigation rate (kg/m2/s)
 !
-REAL, DIMENSION(:), INTENT(OUT)   :: PDELPHASEG, PDELPHASEG_SFC
-!                                     PDELPHASEG     = latent heating due to soil freeze-thaw in the entire soil column  (W m-2)
-!                                     PDELPHASEG_SFC = latent heating due to soil freeze-thaw in the surface soil layer  (W m-2)
+INTEGER, DIMENSION(:), INTENT(IN) :: NPAR_VEG_IRR_USE ! vegtype with irrigation
 !
-REAL   ,DIMENSION(:),INTENT(IN)    :: PIRRIG_GR ! ground irrigation rate (kg/m2/s)
+!*      0.2    declarations of local parameters
 !
-!*      0.2    declarations of local variables
+REAL, PARAMETER             :: ZINSOLFRZ_VEG = 0.20  ! (-)       Vegetation insolation coefficient
+!
+REAL, PARAMETER             :: ZINSOLFRZ_LAI = 30.0  ! (m2 m-2)  Vegetation insolation coefficient
+
+REAL, PARAMETER             :: ZTIMEMAX      = 900.  ! s  Maximum timescale without time spliting
+!
+!*      0.3    declarations of local variables
 !
 !
 INTEGER                         :: JJ, JL      ! loop control                                       
 INTEGER                         :: INDT, JDT   ! Time splitting indicies
-INTEGER                         :: INJ, INL, IDEKTH ! (ISBA-DF option)
+INTEGER                         :: INI, INL, IDEKTH ! (ISBA-DF option)
 !
 REAL                            :: ZTSTEP      ! maximum time split time step (<= PTSTEP)
 !                                              ! ONLY used for DIF option.
 !
 REAL, DIMENSION(SIZE(PVEG))     :: ZPG, ZPG_MELT, ZDUNNE,                            &
-                                   ZLEV, ZLEG, ZLEGI, ZLETR, ZPSNV,                  &
+                                   ZLEV, ZLEG, ZLEGI, ZLETR, ZEG, ZEGI, ZPSNV,       &
                                    ZRR, ZDG3, ZWG3, ZWSAT_AVG, ZWWILT_AVG, ZWFC_AVG, &
-                                   ZRUNOFF, ZDRAIN, ZHORTON, ZEVAPCOR, ZQSB 
+                                   ZRUNOFF, ZDRAIN, ZHORTON, ZEVAPCOR, ZQSB,         &
+                                   ZDELHEATG_SFC, ZDELHEATG 
 !                                      Prognostic variables of ISBA at 't-dt'
 !                                      ZPG = total water reaching the ground
 !                                      ZPG_MELT = snowmelt reaching the ground 
 !                                      ZDUNNE  = Dunne runoff
-!                                 ZLEV, ZLEG, ZLEGI, ZLETR = Evapotranspiration amounts
+!                                      ZLEV, ZLEG, ZLEGI, ZLETR = Evapotranspiration amounts
 !                                      from the non-explicit snow area *ISBA-ES*
-!                                 ZPSNV = used to calculate interception of liquid
+!                                      ZPSNV = used to calculate interception of liquid
 !                                      water by the vegetation in FR snow method:
 !                                      For ES snow method, precipitation already modified
 !                                      so set this to zero here for this option.
-!                                 ZWSAT_AVG, ZWWILT_AVG, ZWFC_AVG = Average water and ice content
+!                                      ZWSAT_AVG, ZWWILT_AVG, ZWFC_AVG = Average water and ice content
 !                                      values over the soil depth D2 (for calculating surface runoff)
-!                                 ZDG3, ZWG3, ZRUNOFF, ZDRAIN, ZQSB and ZHORTON are working variables only used for DIF option
-!                                 ZEVAPCOR = correction if evaporation from snow exceeds
-!                                               actual amount on the surface [m/s]
+!                                      ZDG3, ZWG3, ZRUNOFF, ZDRAIN, ZQSB and ZHORTON are working variables only used for DIF option
+!                                      ZEVAPCOR = correction if evaporation from snow exceeds
+!                                                 actual amount on the surface [m/s]
+!
+REAL, DIMENSION(SIZE(PVEG),SIZE(PEK%XWG,2)) :: ZETR
+!                                              ZETR = profile of water extracted by transpiration from each soil layer
 !
 REAL, DIMENSION(SIZE(PVEG))     :: ZDWGI1, ZDWGI2, ZKSFC_IVEG
 !                                      ZDWGI1 = surface layer liquid water equivalent 
@@ -202,18 +212,10 @@ REAL, DIMENSION(SIZE(PVEG))    :: ZWGI_EXCESS, ZF2
 REAL, DIMENSION(SIZE(PEK%XWG,1),SIZE(PEK%XWG,2)) :: ZQSAT, ZQSATI, ZTI, ZPS
 !                                           For specific humidity at saturation computation (ISBA-DIF)
 !
-REAL, DIMENSION(SIZE(PEK%XWG,1),SIZE(PEK%XWG,2)) :: ZWGI0, ZPHASE
-!                                      ZWGI0 = initial soil ice content (m3 m-3) before update
-!                                              for budget diagnostics
-!                                      ZPHASE= phase change (freeze-thaw) energy (W/m2) by layer
-!
-!*      0.3    declarations of local parameters
-!
-REAL, PARAMETER             :: ZINSOLFRZ_VEG = 0.20  ! (-)       Vegetation insolation coefficient
-!
-REAL, PARAMETER             :: ZINSOLFRZ_LAI = 30.0  ! (m2 m-2)  Vegetation insolation coefficient
-
-REAL, PARAMETER             :: ZTIMEMAX      = 900.  ! s  Maximum timescale without time spliting
+REAL, DIMENSION(SIZE(PEK%XWG,1),SIZE(PEK%XWG,2)) :: ZWGI0
+!                                      ZWGI0 = initial soil ice content (m3 m-3) before update for budget diagnostics
+REAL, DIMENSION(SIZE(PEK%XTG,1),SIZE(PEK%XTG,2)) :: ZTG0
+!                                      ZTG0 = initial temperature profile (K) before update for budget diagnostics
 !
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !-------------------------------------------------------------------------------
@@ -223,7 +225,6 @@ REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
 IF (LHOOK) CALL DR_HOOK('HYDRO',0,ZHOOK_HANDLE)
 !
-
 JDT    = 0
 INDT   = 0
 ZTSTEP = 0.0
@@ -244,18 +245,23 @@ ZRUNOFF(:)       = 0.
 ZWGI_EXCESS(:)   = 0.
 ZEVAPCOR(:)      = 0.
 ZQSB    (:)      = 0.
+ZDELHEATG_SFC(:) = 0.
+ZDELHEATG(:)     = 0.
 !
-DEK%XDRAIN(:)        = 0.
-DEK%XRUNOFF(:)       = 0.
-DEK%XHORT(:)       = 0.
-DEK%XQSB   (:)       = 0.
+DEK%XDRAIN(:)    = 0.
+DEK%XRUNOFF(:)   = 0.
+DEK%XHORT(:)     = 0.
+DEK%XQSB   (:)   = 0.
 !
-PDELPHASEG(:)    = 0.0
-PDELPHASEG_SFC(:)= 0.0
-ZWGI0(:,:)       = 0.0
+DEK%XDELPHASEG(:)    = 0.0
+DEK%XDELPHASEG_SFC(:)= 0.0
 !
-ZF2(:)           = MAX(XDENOM_MIN,PF2(:))
-ZPHASE(:,:)      = 0.0
+ZF2(:) = MAX(XDENOM_MIN,PF2(:))
+!
+! save initial profiles
+!
+ZWGI0(:,:) = PEK%XWGI(:,:) 
+ZTG0 (:,:) = PEK%XTG(:,:)
 !
 ! Initialize evaporation components: variable definitions
 ! depend on snow or explicit canopy scheme:
@@ -322,39 +328,46 @@ END IF
 !*       1.     EVOLUTION OF THE EQUIVALENT WATER CONTENT Wr
 !               --------------------------------------------
 !
-!
-!
 IF(.NOT.OMEB)THEN ! Canopy Int & Irrig Already accounted for if MEB in use.
-!
-   DEK%XIRRIG_FLUX(:)=0.0
-!
-!* add irrigation over vegetation to liquid precipitation (rr)
-!
-!
-   IF (ASSOCIATED(AG%LIRRIGATE)) THEN
-     IF (SIZE(AG%LIRRIGATE)>0) THEN
-       WHERE (AG%LIRRIGATE(:) .AND. PEK%XIRRIG(:)>0. .AND. PEK%XIRRIG(:) /= XUNDEF .AND. (PF2(:)<AG%XTHRESHOLDSPT(:)) )
-         DEK%XIRRIG_FLUX(:) = PEK%XWATSUP(:) / XDAY           
-         ZRR   (:) = ZRR(:) + PEK%XWATSUP(:) / XDAY
-         AG%LIRRIDAY(:)    = .TRUE.           
-       END WHERE
-     ENDIF
-   ENDIF
-!
-!* interception reservoir and dripping computation
-!
-   CALL HYDRO_VEG(IO%CRAIN, PTSTEP, KK%XMUF, ZRR, ZLEV, ZLETR, PVEG, &
-                  ZPSNV,  PEK%XWR(:), PWRMAX, ZPG, DEK%XDRIP, DEK%XRRVEG, PK%XLVTT  ) 
-!
+  !
+  DEK%XIRRIG_FLUX(:)=0.0
+  !
+  !* add irrigation
+  ! Spraying irrigation - over vegetation to liquid precipitation (rr)
+  IF (LIRRIGMODE) THEN 
+    IF (SIZE(AG%LIRRIGATE)>0) THEN
+      WHERE (AG%LIRRIGATE(:) .AND. PEK%XIRRIGTYPE(:) == 1 )
+        DEK%XIRRIG_FLUX(:) = PEK%XWATSUP / PEK%XIRRIGTIME(:)
+        ZRR   (:) = ZRR(:) + PEK%XWATSUP(:) / PEK%XIRRIGTIME(:)
+      ENDWHERE
+    ENDIF
+  ENDIF
+  !
+  !* interception reservoir and dripping computation
+  !
+  CALL HYDRO_VEG(IO%CRAIN, PTSTEP, KK%XMUF, ZRR, ZLEV, ZLETR, PVEG, &
+                 ZPSNV,  PEK%XWR(:), PWRMAX, ZPG, DEK%XDRIP, DEK%XRRVEG, PK%XLVTT  ) 
+  !
 ELSE
+  !
+  ! For MEB case, interception interactions already computed and DMK%XRRSFC represents
+  !  water falling (drip and not intercepted by vegetation) outside of snow covered
+  ! areas. Part for snow covered areas (net outflow at base of snowpack) accounted
+  ! for in PSNOW_THRUFAL.
+  !
+  ZPG(:) = DMK%XRRSFC(:)
+  !
+ENDIF
 !
-! For MEB case, interception interactions already computed and DMK%XRRSFC represents
-! water falling (drip and not intercepted by vegetation) outside of snow covered
-! areas. Part for snow covered areas (net outflow at base of snowpack) accounted
-! for in PSNOW_THRUFAL.
-!
-   ZPG(:) = DMK%XRRSFC(:)
-!
+!* add irrigation
+! Dripping and flooding irrigationi - over soil (zpg)
+IF (LIRRIGMODE) THEN
+  IF (SIZE(AG%LIRRIGATE)>0) THEN
+    WHERE (AG%LIRRIGATE(:) .AND. PEK%XIRRIGTYPE(:) > 1 )
+      DEK%XIRRIG_FLUX(:) = PEK%XWATSUP / PEK%XIRRIGTIME(:)
+      ZPG   (:) = ZPG(:) + PEK%XWATSUP(:) / PEK%XIRRIGTIME(:)
+    ENDWHERE
+  ENDIF
 ENDIF
 !
 !* add irrigation over ground to potential soil infiltration (pg)
@@ -388,7 +401,7 @@ IF(PEK%TSNOW%SCHEME == '3-L' .OR. PEK%TSNOW%SCHEME == 'CRO' .OR. IO%CISBA == 'DI
 ELSE
   !
   CALL HYDRO_SNOW(IO%LGLACIER, PTSTEP, PK%XVEGTYPE_PATCH(:,:), DMK%XSRSFC, &
-                  DEK%XLES, DEK%XMELT, PEK%TSNOW, ZPG_MELT)
+                  DEK%XLES, DEK%XMELT, PEK%TSNOW, ZPG_MELT, NPAR_VEG_IRR_USE)
   !
 ENDIF
 !
@@ -401,7 +414,7 @@ ENDIF
 ! - Horton runoff : Direct or exponential precipitation distribution
 ! - Floodplains interception and infiltration
 !
- CALL HYDRO_SGH(IO, KK, PK, PEK, DEK, DMK, PTSTEP, ZPG, ZPG_MELT, ZDUNNE )         
+CALL HYDRO_SGH(IO, KK, PK, PEK, DEK, DMK, PTSTEP, ZPG, ZPG_MELT, ZDUNNE )         
 !
 !----------------------------------------------------------------------------
 !
@@ -448,12 +461,9 @@ ELSEWHERE
     ZKSFC_IVEG(:) = 1.0 ! No vegetation
 ENDWHERE
 !
-!
-ZWGI0 (:,:) = PEK%XWGI(:,:) ! save initial ice content before phase changes and sublimation
-!
 IF (IO%CISBA=='DIF') THEN                
 !
-  INJ = SIZE(PK%XDG(:,:),1)
+  INI = SIZE(PK%XDG(:,:),1)
   INL = MAXVAL(PK%NWG_LAYER(:))
 !
 ! Initialize some field
@@ -462,7 +472,7 @@ IF (IO%CISBA=='DIF') THEN
   ZPS(:,:)=XUNDEF
   ZTI(:,:)=XUNDEF
   DO JL=1,INL
-     DO JJ=1,INJ
+     DO JJ=1,INI
         IDEKTH=PK%NWG_LAYER(JJ)
         IF(JL<=IDEKTH)THEN
           ZPS(JJ,JL) = PPS(JJ)
@@ -480,88 +490,76 @@ IF (IO%CISBA=='DIF') THEN
 ! Soil water sink terms: convert from (W m-2) and (kg m-2 s-1) to (m s-1)
 ! ------------------------------------------------------------------
 !
-  ZPG     (:) =  ZPG    (:)        / XRHOLW
-  ZEVAPCOR(:) = ZEVAPCOR(:)        / XRHOLW
-  ZLEG    (:) =  ZLEG   (:)        /(XRHOLW*PK%XLVTT(:))
-  ZLETR   (:) = (ZLETR  (:)/ZF2(:))/(XRHOLW*PK%XLVTT(:))
-  ZLEGI   (:) = ZLEGI   (:)        /(XRHOLW*PK%XLSTT(:))
+  ZPG     (:) = ZPG     (:) / XRHOLW
+  ZEVAPCOR(:) = ZEVAPCOR(:) / XRHOLW
+  ZEG     (:) = ZLEG    (:) /(XRHOLW*PK%XLVTT(:))
+  ZEGI    (:) = ZLEGI   (:) /(XRHOLW*PK%XLSTT(:))
+!
+  ZETR(:,:) = 0.0
+  DO JL=1,INL
+     DO JJ=1,INI
+        ZETR(JJ,JL) = (ZLETR(JJ)*PF2WGHT(JJ,JL)/ZF2(JJ)+PLETR_HVEG(JJ,JL))/(XRHOLW*PK%XLVTT(JJ))
+     ENDDO
+  ENDDO
 !
   DO JDT = 1,INDT
-!                      
-    CALL HYDRO_SOILDIF(IO, KK, PK, PEK, ZTSTEP, ZPG, ZLETR, ZLEG, ZEVAPCOR,  &
-                       PF2WGHT, PPS, ZQSAT, ZQSATI, ZDRAIN, ZHORTON, INL, ZQSB )
 !
-
-    CALL ICE_SOILDIF(KK, PK, PEK, ZTSTEP, ZKSFC_IVEG, ZLEGI, PSOILHCAPZ, ZWGI_EXCESS, ZPHASE )
+     CALL HYDRO_SOILDIF(IO, KK, PK, PEK, ZTSTEP, ZPG, ZETR, ZEG, ZEVAPCOR,  &
+                        PPS, ZQSAT, ZQSATI, ZDRAIN, ZHORTON, INL, ZQSB )
 !
-    DEK%XDRAIN(:) = DEK%XDRAIN(:) + (ZDRAIN(:)+ZQSB(:)+ZWGI_EXCESS(:))/REAL(INDT)
-    DEK%XQSB  (:) = DEK%XQSB  (:) + ZQSB   (:)/REAL(INDT)
-    DEK%XHORT (:) = DEK%XHORT (:) + ZHORTON(:)/REAL(INDT)
-
-! Compute latent heating from phase change only in surface layer and total soil column
-
-    PDELPHASEG_SFC(:)    = PDELPHASEG_SFC(:) + ZPHASE(:,1)/REAL(INDT)
-    DO JL=1,INL
-       DO JJ=1,INJ
-          PDELPHASEG(JJ) = PDELPHASEG(JJ)    + ZPHASE(JJ,JL)/REAL(INDT)
-      ENDDO
-    ENDDO
-
+     CALL ICE_SOILDIF(KK, PK, PEK, ZTSTEP, ZKSFC_IVEG, ZEGI, PSOILHCAPZ, &
+                      ZWGI_EXCESS, ZDELHEATG_SFC, ZDELHEATG              )
+!
+     DEK%XDRAIN(:) = DEK%XDRAIN(:) + (ZDRAIN(:)+ZQSB(:)+ZWGI_EXCESS(:))/REAL(INDT)
+     DEK%XQSB  (:) = DEK%XQSB  (:) + ZQSB   (:)/REAL(INDT)
+     DEK%XHORT (:) = DEK%XHORT (:) + ZHORTON(:)/REAL(INDT)
+!
+     DEK%XDELHEATG_SFC(:) = DEK%XDELHEATG_SFC(:) + ZDELHEATG_SFC(:)/REAL(INDT)
+     DEK%XDELHEATG    (:) = DEK%XDELHEATG    (:) + ZDELHEATG    (:)/REAL(INDT)
+!
+  ENDDO
+!
 ! Output diagnostics:
-! Adjust surface and total soil heat content to maintain balance.
-
-    PDELHEATG_SFC(:)     = PDELHEATG_SFC(:) + PDELPHASEG_SFC(:)
-    PDELHEATG(:)         = PDELHEATG(:)     + PDELPHASEG(:)
-
+! Compute latent heating from phase change only in surface layer and total soil column
+!
+  DEK%XDELPHASEG_SFC(:) = ((ZWGI0(:,1)-PEK%XWGI(:,1))*PK%XDZG(:,1)-ZEGI(:)*PTSTEP)*(XLMTT*XRHOLW/PTSTEP)
+  DEK%XDELPHASEG    (:) = DEK%XDELPHASEG_SFC(:)
+  DO JL=2,INL
+     DO JJ=1,INI
+        DEK%XDELPHASEG(JJ) = DEK%XDELPHASEG(JJ) + (ZWGI0(JJ,JL)-PEK%XWGI(JJ,JL))*PK%XDZG(JJ,JL)*(XLMTT*XRHOLW/PTSTEP)
+     ENDDO
   ENDDO
 !
 ELSE
 !
+! adds transpiration from high vegetation if treated separately (for TEB)
+  ZLETR = ZLETR + PLETR_HVEG(:,2)
+!
   DO JDT = 1,INDT
 !
-!   Only layer 1 and 2 are used for soil freezing (ZWG3 not used)
-    CALL ICE_SOILFR(IO, KK, PK, PEK, DMK, ZTSTEP, ZKSFC_IVEG, ZDWGI1, ZDWGI2)
+!    Only layer 1 and 2 are used for soil freezing (ZWG3 not used)
+     CALL ICE_SOILFR(IO, KK, PK, PEK, DMK, ZTSTEP, ZKSFC_IVEG, ZDWGI1, ZDWGI2)
 !
-    CALL HYDRO_SOIL(IO, KK, PK, PEK, DMK, ZTSTEP, ZLETR, ZLEG, ZPG, ZEVAPCOR, ZDG3,    &
-                    ZWSAT_AVG, ZWFC_AVG, ZDWGI1, ZDWGI2, ZLEGI, ZWG3, ZRUNOFF, ZDRAIN, ZWWILT_AVG )
+     CALL HYDRO_SOIL(IO, KK, PK, PEK, DMK, ZTSTEP, ZLETR, ZLEG, ZPG, ZEVAPCOR, ZDG3,    &
+                     ZWSAT_AVG, ZWFC_AVG, ZDWGI1, ZDWGI2, ZLEGI, ZWG3, ZRUNOFF, ZDRAIN, &
+                     ZWWILT_AVG )
 !
-    DEK%XDRAIN (:)  = DEK%XDRAIN (:) + ZDRAIN (:)/REAL(INDT)
-    DEK%XRUNOFF(:)  = DEK%XRUNOFF(:) + ZRUNOFF(:)/REAL(INDT)
+     DEK%XDRAIN (:)  = DEK%XDRAIN (:) + ZDRAIN (:)/REAL(INDT)
+     DEK%XRUNOFF(:)  = DEK%XRUNOFF(:) + ZRUNOFF(:)/REAL(INDT)
 !    
   ENDDO
 !
 ! Output diagnostics:
-! Compute latent heating from phase change only in surface layer and total soil column,
-! then adjust surface and total soil heat content to maintain balance.
+! Compute latent heating from phase change only in surface layer and total soil column
 !
-  PDELPHASEG_SFC(:)    = (PEK%XWGI(:,1)-ZWGI0(:,1))*(XLMTT*XRHOLW/PTSTEP)*PK%XDG(:,1) + ZLEGI(:)
-  PDELPHASEG(:)        = (PEK%XWGI(:,2)-ZWGI0(:,2))*(XLMTT*XRHOLW/PTSTEP)*PK%XDG(:,2)
-  PDELHEATG_SFC(:)     = PDELHEATG_SFC(:) + PDELPHASEG_SFC(:)
-  PDELHEATG(:)         = PDELHEATG(:)     + PDELPHASEG(:)
+  ZEGI              (:) = ZLEGI(:)/(XRHOLW*PK%XLSTT(:))
+  DEK%XDELPHASEG_SFC(:) = DEK%XDELPHASEG_SFC(:) + ((ZWGI0(:,1)-PEK%XWGI(:,1))*PK%XDG(:,1)-ZEGI(:)*PTSTEP)*(XLMTT*XRHOLW/PTSTEP)
+  DEK%XDELHEATG_SFC (:) = DEK%XDELHEATG_SFC (:) + (PEK%XTG(:,1)-ZTG0(:,1))/(DMK%XCT(:)*PTSTEP)
+!
+  DEK%XDELPHASEG    (:) = 0.0
+  DEK%XDELHEATG     (:) = 0.0
 !
   IF (IO%CISBA == '3-L') PEK%XWG(:,3) = ZWG3(:)
-!
-#ifdef TOPD
-  IF (LCOUPL_TOPD) THEN
-    !runoff topo cumule (kg/m²)
-    DO JJ=1,SIZE(NMASKT_PATCH)
-      IF  (NMASKT_PATCH(JJ)/=0) THEN
-        IF ( XATOP(NMASKT_PATCH(JJ))/=XUNDEF) THEN
-          XRUNOFF_TOP(NMASKT_PATCH(JJ)) = XRUNOFF_TOP(NMASKT_PATCH(JJ)) + &
-                                          (DEK%XRUNOFF(JJ)+ DEK%XHORT(JJ))*XATOP(NMASKT_PATCH(JJ))*PTSTEP
-          IF (IO%CRUNOFF=='TOPD') THEN
-            XRUNOFF_TOP(NMASKT_PATCH(JJ)) = XRUNOFF_TOP(NMASKT_PATCH(JJ)) + ZDUNNE(JJ)*PTSTEP
-          ELSE
-            ! ZDUNNE contains only saturated pixels on mesh so only catchment
-            XRUNOFF_TOP(NMASKT_PATCH(JJ)) = XRUNOFF_TOP(NMASKT_PATCH(JJ)) + &
-                                            ZDUNNE(JJ)*XATOP(NMASKT_PATCH(JJ))*PTSTEP
-          ENDIF  
-        ENDIF
-      ENDIF
-      ! ZDUNNE concerns all the mesh so not only catchment =>*XATOP
-    ENDDO
-  ENDIF
-#endif
   !
 ENDIF
 !

@@ -45,6 +45,7 @@ USE MODD_SFX_GRID_n, ONLY : GRID_t
 USE MODD_WATFLUX_n, ONLY : WATFLUX_t
 !
 USE MODD_TYPE_DATE_SURF
+USE MODD_SURF_PAR, ONLY: LEN_HREC
 !
 USE MODD_DATA_COVER_PAR, ONLY : JPCOVER
 !
@@ -77,7 +78,7 @@ TYPE(WATFLUX_t), INTENT(INOUT) :: W
 !
 INTEGER           :: IRESP          ! Error code after redding
 ! 
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 !
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !-------------------------------------------------------------------------------

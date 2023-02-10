@@ -4,8 +4,7 @@
 !SFX_LIC for details. version 1.
 !-----------------------------------------------------------------
 !     ############################
-      SUBROUTINE DIAG_ISBA_TO_ROUT (PMESH_SIZE, &
-                                    PVARC,PVARCP,PVARROUT)
+      SUBROUTINE DIAG_ISBA_TO_ROUT (PMESH_SIZE,PVARC,PVARCP,PVARROUT)
 !     ############################
 !
 !!****  *DIAG_ISBA_TO_ROUT*  
@@ -53,6 +52,7 @@ USE MODD_SURF_ATM_GRID_n, ONLY : SURF_ATM_GRID_t
 USE MODD_SURF_PAR,        ONLY: XUNDEF
 USE MODD_CSTS,            ONLY: XRHOLW
 USE MODD_TOPODYN, ONLY : XTOPD_STEP
+USE MODD_COUPLING_TOPD,   ONLY : XTOTBV_IN_MESH
 !
 USE MODI_ABOR1_SFX
 !
@@ -72,6 +72,7 @@ REAL,DIMENSION(:),INTENT(OUT)       :: PVARROUT    ! Not cumulated diagnostic (m
 !
 !*      0.2    declarations of local variables
 !
+INTEGER :: JI,INB_MESH
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !-------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('DIAG_ISBA_TO_ROUT',0,ZHOOK_HANDLE)
@@ -81,13 +82,16 @@ IF (LHOOK) CALL DR_HOOK('DIAG_ISBA_TO_ROUT',0,ZHOOK_HANDLE)
 PVARROUT=XUNDEF
 !
 IF ( SIZE(PVARC,1)==SIZE(PVARCP,1) ) THEN
-  !
-  WHERE ( PVARC/=XUNDEF )
-    PVARROUT = PVARC - PVARCP
-    PVARROUT = PVARROUT / XTOPD_STEP
-    PVARROUT = PVARROUT * PMESH_SIZE / XRHOLW
-  ENDWHERE
-  !
+  INB_MESH=SIZE(PVARC,1)
+  DO JI=1,INB_MESH
+    !
+    IF ( PVARC(JI)/=XUNDEF )THEN
+      PVARROUT(JI) = PVARC(JI) - PVARCP(JI)
+      PVARROUT(JI) = PVARROUT(JI) / XTOPD_STEP
+      PVARROUT(JI) = PVARROUT(JI) * XTOTBV_IN_MESH(JI) / XRHOLW
+    ENDIF      
+    !
+  ENDDO
 ELSE 
   !
   WRITE(*,*) 'Pb with diagnostic to rout'

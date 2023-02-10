@@ -9,7 +9,7 @@ SUBROUTINE INIT_FLAKE_n ( DTCO, OREAD_BUDGETC, UG, U, FM,            &
                           HSV,PCO2,PRHOA,                            &
                           PZENITH,PAZIM,PSW_BANDS,PDIR_ALB,PSCA_ALB, &
                           PEMIS,PTSRAD,PTSURF,                       &
-                          KYEAR, KMONTH,KDAY, PTIME,                 &
+                          KYEAR, KMONTH,KDAY, PTIME,AT,              &
                           HATMFILE,HATMFILETYPE,                     &
                           HTEST                                     )   
 !     #############################################################
@@ -54,6 +54,7 @@ USE MODD_SURFEX_n, ONLY : FLAKE_MODEL_t
 USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
 USE MODD_SURF_ATM_GRID_n, ONLY : SURF_ATM_GRID_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
+USE MODD_DIAG_n, ONLY : DIAG_OPTIONS_t
 !
 !
 USE MODD_CSTS,          ONLY : XTT, XPI, XOMEGA 
@@ -70,6 +71,8 @@ USE MODD_SLT_SURF,       ONLY: LVARSIG_SLT, NSLTMDE, NSLT_MDEBEG, LRGFIX_SLT
 !
 USE MODD_READ_NAMELIST,  ONLY : LNAM_READ
 USE MODD_SURF_PAR,       ONLY : XUNDEF, NUNDEF
+!
+USE MODD_SURF_ATM_TURB_n, ONLY : SURF_ATM_TURB_t
 !
 USE MODI_INIT_IO_SURF_n
 USE MODI_DEFAULT_CH_DEP
@@ -110,6 +113,7 @@ LOGICAL, INTENT(IN) :: OREAD_BUDGETC
 TYPE(SURF_ATM_GRID_t), INTENT(INOUT) :: UG
 TYPE(SURF_ATM_t), INTENT(INOUT) :: U
 TYPE(FLAKE_MODEL_t), INTENT(INOUT) :: FM
+TYPE(SURF_ATM_TURB_t), INTENT(IN) :: AT         ! atmospheric turbulence parameters
 !
  CHARACTER(LEN=6),                 INTENT(IN)  :: HPROGRAM  ! program calling surf. schemes
  CHARACTER(LEN=3),                 INTENT(IN)  :: HINIT     ! choice of fields to initialize
@@ -189,13 +193,13 @@ ENDIF
 !
 !        0.2. Defaults from file header
 !    
- CALL READ_DEFAULT_FLAKE_n(FM%CHF, FM%DFO, FM%DMF, FM%F, HPROGRAM)
+CALL READ_DEFAULT_FLAKE_n(FM%CHF, FM%DFO, FM%DMF, FM%F, HPROGRAM)
 
 !
 !*       1.1    Reading of configuration:
 !               -------------------------
 !
- CALL READ_FLAKE_CONF_n(FM%CHF, FM%DFO, FM%DMF, FM%F, HPROGRAM)
+CALL READ_FLAKE_CONF_n(FM%CHF, FM%DFO, FM%DMF, FM%F, HPROGRAM)
 !
 !-------------------------------------------------------------------------------
 !
@@ -227,13 +231,13 @@ END SELECT
 !
 !         Initialisation for IO
 !
- CALL SET_SURFEX_FILEIN(HPROGRAM,'PGD ') ! change input file name to pgd name
+CALL SET_SURFEX_FILEIN(HPROGRAM,'PGD ') ! change input file name to pgd name
 !
 CALL INIT_IO_SURF_n(DTCO, U, HPROGRAM,'WATER ','FLAKE ','READ ')
 !
 !         Reading of the fields
 !
- CALL READ_PGD_FLAKE_n(DTCO, U, UG, FM%G, FM%F, HPROGRAM)
+CALL READ_PGD_FLAKE_n(DTCO, U, UG, FM%G, FM%F, HPROGRAM)
 !
  CALL END_IO_SURF_n(HPROGRAM)
  CALL SET_SURFEX_FILEIN(HPROGRAM,'PREP') ! restore input file name
@@ -256,7 +260,7 @@ END IF
 !
 CALL INIT_IO_SURF_n(DTCO, U, HPROGRAM,'WATER ','FLAKE ','READ ')
 !
- CALL READ_FLAKE_n(DTCO, U, FM%F, HPROGRAM)
+CALL READ_FLAKE_n(DTCO, U, FM%F, HPROGRAM)
 !
 ILU = SIZE(FM%F%XCOVER,1)
 !
@@ -290,7 +294,7 @@ FM%F%XDIR_ALB = 0.0
 FM%F%XSCA_ALB = 0.0
 FM%F%XEMIS    = 0.0
 !
- CALL UPDATE_RAD_FLAKE(FM%F,PZENITH,PDIR_ALB,PSCA_ALB,PEMIS,PTSRAD  )
+CALL UPDATE_RAD_FLAKE(FM%F,PZENITH,PDIR_ALB,PSCA_ALB,PEMIS,PTSRAD  )
 !
 PTSURF(:) = FM%F%XTS(:)
 !
@@ -299,17 +303,18 @@ PTSURF(:) = FM%F%XTS(:)
 !*       6.     SBL air fields:
 !               --------------
 !
- CALL READ_SBL_n(DTCO, U, FM%SB, FM%F%LSBL, HPROGRAM, "WATER ")
+CALL READ_SBL_n(DTCO, U, FM%SB, FM%F%LSBL, HPROGRAM, "WATER ")
 !
 !-------------------------------------------------------------------------------
 !
-!*       6.     Chemistry / dust
-!               ----------------
+!*       6.     Chemistry / dust /sea salts
+!               ---------------------------
 !
 !
- CALL INIT_CHEMICAL_n(ILUOUT, KSV, HSV, FM%CHF%SVF,    &      
-                     FM%CHF%CCH_NAMES, FM%CHF%CAER_NAMES,      &
-                     HDSTNAMES=FM%CHF%CDSTNAMES, HSLTNAMES=FM%CHF%CSLTNAMES  )
+CALL INIT_CHEMICAL_n(ILUOUT, KSV, HSV, FM%CHF%SVF, FM%CHF%SLTF, FM%CHF%DSTF, &      
+                     FM%CHF%CCH_NAMES, FM%CHF%CAER_NAMES,                    &
+                     HDSTNAMES=FM%CHF%CDSTNAMES, HSLTNAMES=FM%CHF%CSLTNAMES, &
+                     HSNWNAMES=FM%CHF%CSNWNAMES  )
 !
 !* depositiion scheme
 !
@@ -324,10 +329,28 @@ END IF
 !*       7.     diagnostics initialization
 !               --------------------------
 !
- CALL DIAG_FLAKE_INIT_n(OREAD_BUDGETC, FM%DFO, FM%DF, FM%DFC, FM%DMF, FM%F, &
+!-----------------------------------------------------------------------------------------------------
+! Make sure some diags are conputed when coupled with atmosphere
+!-----------------------------------------------------------------------------------------------------
+!
+IF(HINIT=='ALL'.AND.FM%DFO%LDIAG_MIP)THEN
+  FM%DFO%N2M           = 2
+  FM%DFO%LSURF_BUDGET  = .TRUE.
+  FM%DFO%LRAD_BUDGET   = .TRUE.
+  FM%DFO%LSURF_BUDGETC = .FALSE.
+ENDIF        
+!
+CALL DIAG_FLAKE_INIT_n(OREAD_BUDGETC, FM%DFO, FM%DF, FM%DFC, FM%DMF, FM%F, &
                         HPROGRAM,ILU,KSW)
+
 !
 !-------------------------------------------------------------------------------
+!
+!*       8.     atmospheric turbulence parameters
+!               ---------------------------------
+!
+FM%AT=AT
+!
 !-------------------------------------------------------------------------------
 !
 !         End of IO

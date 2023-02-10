@@ -11,6 +11,7 @@
 !
 !
 USE MODI_READ_SURF
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
@@ -30,7 +31,7 @@ LOGICAL,              INTENT(OUT)   :: OCLIM_LAI ! flag for use of climatologic 
 !* local variables
 !  ---------------
 !
- CHARACTER(LEN=12) :: YRECFM     ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM     ! Name of the article to be read
 INTEGER           :: IRESP      ! reading return code
 !
 INTEGER           :: IVERSION   ! surface version

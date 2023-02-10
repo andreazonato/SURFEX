@@ -41,6 +41,7 @@
 !!    -------------
 !!
 !!      Original   23/11/2005
+!!      Modif B Vincendon 07/2017 : more control for UNDEF variables
 !-------------------------------------------------------------------------------
 !
 !*       0.     DECLARATIONS
@@ -49,32 +50,31 @@
 USE MODD_SURF_PAR,  ONLY : XUNDEF,NUNDEF
 !
 USE MODD_TOPODYN, ONLY : NNCAT, NNMC, NMESHT
-USE MODD_COUPLING_TOPD,ONLY: NMASKI, NMASKT, NNPIX
+USE MODD_COUPLING_TOPD,ONLY: NMASKI, NMASKT, NNBV_IN_MESH
 !
-USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
+USE YOMHOOK   ,ONLY : LHOOK, DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
 !
 IMPLICIT NONE
 !
 !*      0.1    declarations of arguments
 !
-INTEGER, INTENT(IN)              :: KI      ! Number of Isba meshes
-REAL, DIMENSION(:,:), INTENT(IN) :: PKAPPA  ! Hydrological indexes on the catchments 
-                                            ! at the previous time step
-REAL, DIMENSION(:), INTENT(IN)   :: PKAPPAC ! Hydrological index at saturation at the 
-                                            ! previous time step
-REAL, DIMENSION(:), INTENT(IN)   :: PRO_I   ! Runoff on Isba grid
-REAL, DIMENSION(:,:), INTENT(OUT):: PRO_T   ! Runoff on TOPODYN grid
+INTEGER, INTENT(IN)               :: KI      ! Number of Isba meshes
+REAL, DIMENSION(:,:), INTENT(IN)  :: PKAPPA  ! Hydrological indexes on the catchments 
+                                             ! at the previous time step
+REAL, DIMENSION(:), INTENT(IN)    :: PKAPPAC ! Hydrological index at saturation at the 
+                                             ! previous time step
+REAL, DIMENSION(:,:), INTENT(IN)  :: PRO_I   ! Runoff on Isba grid for each catchment
+REAL, DIMENSION(:,:), INTENT(OUT) :: PRO_T   ! Runoff on TOPODYN grid
 !
 !
 !*      0.2    declarations of local variables
 !
 INTEGER                          :: JCAT, JPIX, JMESH_ISBA,JJ ! Loop indexes
-INTEGER, DIMENSION(KI)           :: INSAT       ! number of saturated pixels in an ISBA mesh
-INTEGER, DIMENSION(KI)           :: INDRY       ! Number of non-saturated pixels in an ISBA mesh
+INTEGER, DIMENSION(NNCAT,KI)     :: INSAT       ! number of saturated pixels in an ISBA mesh
+INTEGER, DIMENSION(NNCAT,KI)     :: INDRY       ! Number of non-saturated pixels in an ISBA mesh
 REAL, DIMENSION(NNCAT,NMESHT)    :: ZROSAT      ! 
 REAL, DIMENSION(NNCAT,NMESHT)    :: ZRODRY      ! 
- CHARACTER(LEN=30)                :: YVAR        ! name of results file
 !
 REAL::ZSMALL,ZTMP,ZTMP2
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
@@ -84,11 +84,11 @@ IF (LHOOK) CALL DR_HOOK('ISBA_TO_TOPDSAT',0,ZHOOK_HANDLE)
 !*       0.     Initialization :
 !               --------------
 !
-INSAT(:)=0
-INDRY(:)=0
+INSAT(:,:)=0
+INDRY(:,:)=0
 ZROSAT(:,:)=0.0
 ZRODRY(:,:)=0.0
-!
+!Full grid
 ! Only Isba meshes over studied catchments are scanned
 DO JMESH_ISBA = 1,KI
   !
@@ -99,14 +99,16 @@ DO JMESH_ISBA = 1,KI
     !
     DO WHILE (JPIX/=NUNDEF .AND.(JJ<=SIZE(NMASKI,3)))
       !
-      IF (PKAPPA(JCAT,JPIX)/=XUNDEF .AND. NMASKT(JCAT,JPIX)/=NUNDEF) THEN
+      IF (PKAPPA(JCAT,JPIX)/=XUNDEF .AND. PKAPPAC(JCAT)/=XUNDEF.AND.&
+          NMASKT(JCAT,JPIX)/=NUNDEF .AND. NMASKT(JCAT,JPIX)/=0.AND.&
+          PRO_I(NMASKT(JCAT,JPIX),JCAT)/=XUNDEF) THEN
         ! Calculation of the saturated and dry catchment pixels in each Isba mesh
         IF (PKAPPA(JCAT,JPIX).GE.PKAPPAC(JCAT)) THEN
-          INSAT(NMASKT(JCAT,JPIX)) = INSAT(NMASKT(JCAT,JPIX)) + 1
-          ZROSAT(JCAT,JPIX) = PRO_I(NMASKT(JCAT,JPIX))
+          INSAT(JCAT,NMASKT(JCAT,JPIX)) = INSAT(JCAT,NMASKT(JCAT,JPIX)) + 1
+          ZROSAT(JCAT,JPIX) = PRO_I(NMASKT(JCAT,JPIX),JCAT)
         ELSE
-          INDRY(NMASKT(JCAT,JPIX)) = INDRY(NMASKT(JCAT,JPIX)) + 1 
-          ZRODRY(JCAT,JPIX) = PRO_I(NMASKT(JCAT,JPIX))
+          INDRY(JCAT,NMASKT(JCAT,JPIX)) = INDRY(JCAT,NMASKT(JCAT,JPIX)) + 1 
+          ZRODRY(JCAT,JPIX) = PRO_I(NMASKT(JCAT,JPIX),JCAT)
         ENDIF
       ENDIF
       !
@@ -124,13 +126,16 @@ DO JCAT = 1,NNCAT
   !
   DO JPIX = 1,NNMC(JCAT)
     !
-    IF (NMASKT(JCAT,JPIX)/=NUNDEF) THEN
+    IF ( NMASKT(JCAT,JPIX)/=NUNDEF.AND.NMASKT(JCAT,JPIX)/=0) THEN
       ! calculation of the runoff and deep drainage to rout in each Isba mesh, for each catchment
-      IF (INSAT(NMASKT(JCAT,JPIX)).GT.0 .AND. PKAPPA(JCAT,JPIX)/=XUNDEF) THEN
-        PRO_T(JCAT,JPIX) = ZROSAT(JCAT,JPIX) / INSAT(NMASKT(JCAT,JPIX))
+      IF (INSAT(JCAT,NMASKT(JCAT,JPIX))>0 .AND. INSAT(JCAT,NMASKT(JCAT,JPIX))/=XUNDEF.AND.&
+          ZROSAT(JCAT,JPIX)/=XUNDEF ) THEN
+        PRO_T(JCAT,JPIX) = ZROSAT(JCAT,JPIX) / INSAT(JCAT,NMASKT(JCAT,JPIX))
+
         ! if no runoff : calculation of the deep drainage to rout in each Isba mesh for each catchment
-      ELSEIF (INDRY(NMASKT(JCAT,JPIX)).GT.0 .AND. PKAPPA(JCAT,JPIX)/=XUNDEF) THEN
-        PRO_T(JCAT,JPIX) = ZRODRY(JCAT,JPIX) / INDRY(NMASKT(JCAT,JPIX))
+      ELSEIF (INDRY(JCAT,NMASKT(JCAT,JPIX))>0 .AND. INDRY(JCAT,NMASKT(JCAT,JPIX))/=XUNDEF.AND.&
+           ZRODRY(JCAT,JPIX)/=XUNDEF) THEN
+        PRO_T(JCAT,JPIX) = ZRODRY(JCAT,JPIX) / INDRY(JCAT,NMASKT(JCAT,JPIX))
       ELSE
         PRO_T(JCAT,JPIX) = 0.
       ENDIF
@@ -145,10 +150,11 @@ DO JCAT = 1,NNCAT
   DO JPIX = 1,NNMC(JCAT)
     !
     IF (PRO_T(JCAT,JPIX)/=XUNDEF) ZTMP = ZTMP + PRO_T(JCAT,JPIX)
-    IF ( NMASKT(JCAT,JPIX)/=NUNDEF) THEN
-      IF (PRO_I(NMASKT(JCAT,JPIX))/=XUNDEF .AND. NNPIX(NMASKT(JCAT,JPIX))/=0 ) &
-      ZTMP2 = ZTMP2 + PRO_I(NMASKT(JCAT,JPIX)) / NNPIX(NMASKT(JCAT,JPIX))
-    ENDIF
+    IF (NMASKT(JCAT,JPIX)/=NUNDEF.AND.NMASKT(JCAT,JPIX)/=0 .AND. &
+        PRO_I(NMASKT(JCAT,JPIX),JCAT)/=XUNDEF .AND. &
+        NNBV_IN_MESH(NMASKT(JCAT,JPIX),JCAT)/=0 .AND.&
+        NNBV_IN_MESH(NMASKT(JCAT,JPIX),JCAT)/=NUNDEF) &
+      ZTMP2 = ZTMP2 + (PRO_I(NMASKT(JCAT,JPIX),JCAT)/NNBV_IN_MESH(NMASKT(JCAT,JPIX),JCAT))
     !
   ENDDO!JPIX
   !

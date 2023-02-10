@@ -44,6 +44,7 @@
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_READ_SURF
 !
@@ -55,8 +56,8 @@ IMPLICIT NONE
 !
 !
  CHARACTER(LEN=6),  INTENT(IN)  :: HPROGRAM ! main program
- CHARACTER(LEN=12), INTENT(IN)  :: HRECIN   ! name of field to be read
- CHARACTER(LEN=12), INTENT(OUT) :: HRECOUT  ! name of field to be read is old file
+ CHARACTER(LEN=LEN_HREC), INTENT(IN)  :: HRECIN   ! name of field to be read
+ CHARACTER(LEN=LEN_HREC), INTENT(OUT) :: HRECOUT  ! name of field to be read is old file
  CHARACTER(LEN=1), INTENT(IN), OPTIONAL :: HDIR
 !
 !

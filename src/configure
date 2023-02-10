@@ -3,8 +3,8 @@
 if [ "x$XYZ" = "x" ] 
 then
 #
-export VERSION_MASTER=${VERSION_MASTER:-SFX-V8-1}
-export VERSION_BUG=${VERSION_BUG:-1}
+export VERSION_MASTER=${VERSION_MASTER:-SFX-V9}
+export VERSION_BUG=${VERSION_BUG:-0}
 export VERSION_XYZ=${VERSION_MASTER}-${VERSION_BUG}
 export VERSION_DATE=${VERSION_DATE:-"27/03/2012"}
 export VERSION_M4=${VERSION_M4:-"1.4.19"}
@@ -17,7 +17,7 @@ export VERSION_CDFF=${VERSION_CDFF:-"4.5.3"}
 export VERSION_GRIBAPI=${VERSION_GRIBAPI:-"1.17.0"}
 export VERSION_ECCODES=${VERSION_ECCODES:-"2.18.0"}
 export VERSION_OASIS=${VERSION_OASIS-"3-mct"}
-export VERSION_XIOS=${VERSION_XIOS:-"trunk-1078"}
+export VERSION_XIOS=${VERSION_XIOS:-"GMGEC-2152"}
 export SFX_INT=${SFX_INT-"I4"}
 export SFX_GRIBAPI=no
 #
@@ -156,7 +156,7 @@ module rm netcdf ; module load netcdf/3.6.3
               ;;
 'Linux babel'*) 
                 export     ARCH=${ARCH:-BG} 
-                export  VER_MPI=${VER_MPI:-MPIAUTO}   
+                export  VER_MPI=${VER_MPI:-MPIAUTO}
 	        export  VER_XIOS=${VER_XIOS:-0}
                 export OPTLEVEL=${OPTLEVEL:-O2} 
                 export MVWORK=${MVWORK:-YES}
@@ -258,7 +258,7 @@ export LIB_GRIBAPI='${GRIB_API_LIB}'
                 export NEED_NCARG=${NEED_NCARG:-NO}
                 export NEED_TOOLS=NO
                 export BULL=2020
-                export OPT_PROC="-march=core-avx2 -no-fma"
+                export OPT_PROC="-march=core-avx2 -align array64byte,all -finline-functions -finline-limit=500 -Winline -qopt-prefetch=4 -fast-transcendentals -fimf-use-svml -no-fma"
               ;;
 'Linux nuwa'*)      
                 export     ARCH=${ARCH:-LXifort} 
@@ -556,10 +556,19 @@ else
 fi
 fi
 #
+#  Install MEGAN if MNH_MEGAN=1
+#
+if [ "x${MNH_MEGAN}" == "x1" ] ; then
+( cd $LOCAL/src/LIB ; [ ! -d MEGAN ] && tar xvfz megan.tar.gz )
+fi
+#
+#  Install SPARTACUS
+(cd $LOCAL/src/LIB ; [ ! -d SPARTACUS ] && tar xvfz SPARTACUS_SURFACE_0.6.1.tar.gz)
+#
 #  Install XIOS
 #
 set -x
-if [ x"${VER_XIOS}" == x2 ] ; then
+if [ x"${VER_XIOS}" = x2 ] ; then
     if [ "x${VER_MPI}" = "xNOMPI" ] ; then
 	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!'
 	echo 'XIOS can not be compiled without mpi'

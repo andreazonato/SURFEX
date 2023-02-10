@@ -45,6 +45,7 @@ SUBROUTINE SURF_SOLAR_SLOPES (PCOSZEN,PSINZEN,PAZIMSOL,PSLOPANG, PSLOPAZI, &
 !              ------------
 !
 USE MODD_SLOPE_EFFECT, ONLY:NNXLOC,NNYLOC
+USE MODD_SURF_ATM, ONLY : LSLOPE
 !
 IMPLICIT NONE
 !
@@ -114,7 +115,21 @@ DO JT=1,4
 ! Modif Matthieu Lafaysse :
 ! threshold 0.001 on zenithal angle cosinus to avoid numerical problems at sunset and sunrise
 
-      PDIRSWDT(JI,JJ,JT,:) = MAX( 0.0 , PDIRSRFSWD(JI,JJ,:) * ( &
+      IF (LSLOPE) THEN
+!      
+        ! The incoming energy is separated in 4 equal horizontal contributions
+        ! then projected on the 4 slopes of the 4 triangles
+        PDIRSWDT(JI,JJ,JT,:) = MAX( 0.0 , 0.25*PDIRSRFSWD(JI,JJ,:) * ( &
+            COS(PSLOPANG(JI,JJ,JT))                                          &
+        + SIN(PSLOPANG(JI,JJ,JT)) * PSINZEN(JI,JJ) / MAX(PCOSZEN(JI,JJ),0.001)     &
+            *  COS(PAZIMSOL(JI,JJ)-PSLOPAZI(JI,JJ,JT))))      
+ !     
+      ELSE
+        ! NOT RECOMMENDED :
+        ! With other parameterizations, the total incident radiation is normalized
+        ! at the end on an horizontal surface.
+!
+         PDIRSWDT(JI,JJ,JT,:) = MAX( 0.0 , PDIRSRFSWD(JI,JJ,:) * ( &
          COS(PSLOPANG(JI,JJ,JT))                                          &
        + SIN(PSLOPANG(JI,JJ,JT)) * PSINZEN(JI,JJ) / MAX(PCOSZEN(JI,JJ),0.001)     &
          *  COS(PAZIMSOL(JI,JJ)-PSLOPAZI(JI,JJ,JT))))
@@ -131,6 +146,9 @@ DO JT=1,4
 !             PDIRSRFSWD(JI,JJ,JB),PDIRSWDT(JI,JJ,JT,JB)
 !           END IF
 !         END DO
+
+      ENDIF
+
     END DO
   END DO
 END DO

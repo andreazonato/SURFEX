@@ -691,6 +691,24 @@ CRACK:    {
         elsif(/^SEQUENCE\b/) {
           $content='SEQUENCE';
         }
+        elsif(/^PROCEDURE\b/) {
+          $content='PROCEDURE';
+        }
+        elsif(/^GENERIC\b/) {
+          $content='GENERIC';
+        }
+        elsif(/^CLASS\b/) {
+          $content='CLASS';
+        }
+        elsif(/^ENUM\b/) {
+          $content='ENUM';
+        }
+        elsif(/^ENUMERATOR\b/) {
+          $content='ENUMERATOR';
+        }
+        elsif(/^END ENUM\b/) {
+          $content='END ENUM';
+        }
         elsif(/^INTERFACE\b/) {
           $content='INTERFACE';
           if(! $study_called) {
@@ -1107,6 +1125,9 @@ sub study_exec{
 #RJ: new class "pointer_assign"
   elsif(/^(?:[A-Z][\w]*+)[\s ]*+[\=][\>]/) {             #iglob_type  => g%glob%ntypsend(:)
     $$content='pointer_assign';
+  }
+  elsif(/^FLUSH\s*\(/) {
+    $$content='FLUSH';
   }
   elsif(/^$name\s*=/o) {                                 #ZVAR = ....
     $$content='scal_assign';

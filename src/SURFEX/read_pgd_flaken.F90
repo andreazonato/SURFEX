@@ -46,12 +46,11 @@ USE MODD_SFX_GRID_n, ONLY : GRID_t
 USE MODD_FLAKE_n, ONLY : FLAKE_t
 USE MODD_SURF_ATM_GRID_n, ONLY : SURF_ATM_GRID_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODD_TYPE_DATE_SURF
 !
 USE MODD_DATA_COVER_PAR, ONLY : JPCOVER
-
-
 !
 USE MODE_READ_SURF_COV, ONLY : READ_SURF_COV
 !
@@ -83,7 +82,7 @@ TYPE(SURF_ATM_GRID_t), INTENT(INOUT) :: UG
 !
 INTEGER           :: IRESP          ! Error code after redding
 ! 
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 !
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !-------------------------------------------------------------------------------

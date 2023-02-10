@@ -64,7 +64,6 @@ CHARACTER(LEN=2),   INTENT(IN) :: HTEST ! must be equal to 'OK'
 REAL, DIMENSION (KI) :: ZTRD3
 REAL, DIMENSION (KI) :: ZT2INC
 REAL, DIMENSION (KI) :: ZTCLS
-INTEGER              :: I
 REAL(KIND=JPRB)      :: ZHOOK_HANDLE
 !
 IF (LHOOK) CALL DR_HOOK('ASSIM_TEB_N',0,ZHOOK_HANDLE)
@@ -75,7 +74,7 @@ END IF
 
 WRITE(*,*) 'UPDATING TOWN FOR SCHEME: ',TRIM(U%CTOWN)
 
-IF ( TOP%NROAD_LAYER < 3 ) CALL ABOR1_SFX('ASSIM_TEB_n: Only imlemented with 3 or more layers')
+IF ( TOP%NTEB_SOIL < 3 ) CALL ABOR1_SFX('ASSIM_TEB_n: Only imlemented with 3 or more layers')
 
 ZTRD3(:) = NT%AL(1)%XT_ROAD(:,3)  ! T_ROAD3
 ZTCLS(:) = XAT2M_TEB(:)  ! T2M (TEB)

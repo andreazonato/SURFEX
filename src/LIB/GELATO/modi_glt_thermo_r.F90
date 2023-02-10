@@ -72,6 +72,8 @@
 !           If Gelato is activated in ARPEGE/Surfex, the atmospheric code 
 !           will therefore "see" surface conditions closer to the used 
 !           climatology.
+! Modified: 2016/06 (Mathieu Chevalier)
+!           Constrain seaice tickness in Arctic (4m) and Antarctic (1m)
 !
 ! ------------------- BEGIN MODULE modi_glt_thermo_r ------------------------
 
@@ -182,6 +184,9 @@ SUBROUTINE glt_thermo_r  &
         tzldsil
   REAL :: &
         zice_a, zemps_a, zsalt_a, zsalf_a, zsalt_a_0, zsalf_a_0
+! MCH
+  INTEGER :: jt
+! MCH
 !
 !
 ! 1.4. Welcome message
@@ -369,6 +374,26 @@ SUBROUTINE glt_thermo_r  &
 !
   CALL glt_aventh( tpsit,tpsil,tpdia%sie,tpdia%sne )
 !
+!-------------------------------------------------------------------
+! MCH - For AMIP run
+!-------------------------------------------------------------------
+!
+! MCH - cap sea ice thickness for AMIP uses (test 1: after all checks and diags)
+! MCH - BEGIN
+  IF (lp1) THEN
+    WRITE(noutlu,*) ' '
+    WRITE(noutlu,*) ' *** cap sea ice thickness for AMIP uses (test 1: after all checks and diags)'
+    WRITE(noutlu,*) ' '
+  ENDIF
+  DO jt=1,nt
+     tpsit(jt,:)%hsi = MIN(tpsit(jt,:)%hsi,4.)
+     WHERE ( tpdom(:)%lat < 0. )
+        tpsit(jt,:)%hsi = MIN(tpsit(jt,:)%hsi,1.) 
+     ENDWHERE
+  END DO
+! MCH - END
+!
+!-------------------------------------------------------------------
 !
 !
 ! 6. FAREWELL MESSAGE

@@ -40,6 +40,7 @@
 !
 !
 USE MODD_IO_BUFF
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
@@ -52,7 +53,7 @@ IMPLICIT NONE
 !
 !
 !
- CHARACTER(LEN=12),  INTENT(IN) :: HREC     ! field to read or write
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN) :: HREC     ! field to read or write
  CHARACTER(LEN=1),   INTENT(IN) :: HACTION  ! 'R' : file being read
                                            ! 'W' : file being written
 !

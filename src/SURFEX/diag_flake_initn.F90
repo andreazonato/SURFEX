@@ -49,7 +49,7 @@ USE MODD_FLAKE_n, ONLY : FLAKE_t
 #ifdef SFX_OL
 USE MODN_IO_OFFLINE,     ONLY : LRESTART
 #endif
-USE MODD_SURF_PAR,       ONLY : XUNDEF
+USE MODD_SURF_PAR,       ONLY : XUNDEF, LEN_HREC
 USE MODD_SFX_OASIS,      ONLY : LCPL_LAKE
 !
 !
@@ -83,7 +83,7 @@ CHARACTER(LEN=6), INTENT(IN):: HPROGRAM  ! program calling
 !
 INTEGER           :: IVERSION
 INTEGER           :: IRESP          ! IRESP  : return-code if a problem appears
-CHARACTER(LEN=12) :: YREC           ! Name of the article to be read
+CHARACTER(LEN=LEN_HREC) :: YREC           ! Name of the article to be read
 REAL(KIND=JPRB)   :: ZHOOK_HANDLE
 !
 !-------------------------------------------------------------------------------

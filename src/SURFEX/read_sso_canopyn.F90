@@ -47,7 +47,7 @@ USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
 USE MODD_CANOPY_n, ONLY : CANOPY_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 !
-USE MODD_SURF_PAR,        ONLY : XUNDEF
+USE MODD_SURF_PAR,        ONLY : XUNDEF, LEN_HREC
 !
 USE MODI_READ_SURF
 USE MODI_SET_SSO_LEVELS
@@ -73,7 +73,7 @@ TYPE(SURF_ATM_t), INTENT(INOUT) :: U
 !*       0.2   Declarations of local variables
 !              -------------------------------
 !
- CHARACTER(LEN=12) :: YRECFM       ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM       ! Name of the article to be read
  CHARACTER(LEN=3)  :: YREAD
 INTEGER :: ILU     ! 1D physical dimension
 INTEGER :: IRESP   ! Error code after redding

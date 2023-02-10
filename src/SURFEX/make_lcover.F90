@@ -1,6 +1,6 @@
-!SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
+!SFX_LIC Copyright 1997-2019 CNRS, Meteo-France and Universite Paul Sabatier
 !SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
-!SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
+!SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt
 !SFX_LIC for details. version 1.
 
 !     #########
@@ -33,6 +33,8 @@
 !!    ------------
 !!
 !!    Original    10/12/97
+!  P. Wautelet 05/2016-04/2018: new data structures and calls for I/O
+!  P. Wautelet 26/04/2019: use modd_precision parameters for datatypes of MPI communications
 !!
 !----------------------------------------------------------------------------
 !
@@ -45,14 +47,15 @@ USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
 !
 #ifdef SFX_MNH
-USE MODE_FD_ll, ONLY : GETFD,FD_ll
-USE MODD_IO_ll, ONLY : ISP, ISNPROC
+USE MODD_IO, ONLY : ISP, ISNPROC, NIO_RANK
+use modd_mpif
+use modd_precision,   only: MNHLOG_MPI
 USE MODD_VAR_ll, ONLY : NMNH_COMM_WORLD
 #endif
 !
 IMPLICIT NONE
 !
-#if defined(SFX_MPI) || defined(SFX_MNH)
+#if defined(SFX_MPI)
 INCLUDE "mpif.h"
 #endif
 !
@@ -63,10 +66,6 @@ LOGICAL, DIMENSION(:), INTENT(INOUT) :: OCOVER
 !
 !*    0.2    Declaration of local variables
 !            ------------------------------
-!
-#ifdef SFX_MNH
-TYPE(FD_ll), POINTER                     :: TZFD
-#endif
 !
 INTEGER :: INFOMPI, JPROC, JCOVER
 !
@@ -84,8 +83,6 @@ REAL(KIND=JPRB) :: ZHOOK_HANDLE
 IF (LHOOK) CALL DR_HOOK('MAKE_LCOVER',0,ZHOOK_HANDLE)
 !
 #ifdef SFX_MNH
-TZFD=>GETFD(NMNH_COMM_WORLD)
-!
 IRANK_SAVE = NRANK
 IPROC_SAVE = NPROC
 IPIO_SAVE = NPIO
@@ -94,17 +91,20 @@ ICOMM_SAVE = NCOMM
 ! on met les infos de mésonh
 NRANK = ISP-1
 NPROC = ISNPROC
-NPIO = TZFD%OWNER-1
-NCOMM = TZFD%COMM
+NPIO  = NIO_RANK-1
+NCOMM = NMNH_COMM_WORLD
 #endif
 !
 ALLOCATE(GCOVER_ALL(SIZE(OCOVER),0:NPROC-1))
 !
 !
 IF (NPROC>1) THEN
-#if defined(SFX_MPI) || defined(SFX_MNH)
+#if defined(SFX_MPI)
   CALL MPI_ALLGATHER(OCOVER,SIZE(OCOVER),MPI_LOGICAL,GCOVER_ALL,SIZE(OCOVER),&
                   MPI_LOGICAL,NCOMM,INFOMPI)
+#elif defined(SFX_MNH)
+  CALL MPI_ALLGATHER(OCOVER,SIZE(OCOVER),MNHLOG_MPI,GCOVER_ALL,SIZE(OCOVER),&
+                  MNHLOG_MPI,NCOMM,INFOMPI)
 #endif
 ELSE
   GCOVER_ALL(:,0) = OCOVER(:)
@@ -122,8 +122,10 @@ DEALLOCATE(GCOVER_ALL)
 !
 !
 IF (NPROC>1) THEN
-#if defined(SFX_MPI) || defined(SFX_MNH)
+#if defined(SFX_MPI)
   CALL MPI_BCAST(OCOVER,SIZE(OCOVER),MPI_LOGICAL,NPIO,NCOMM,INFOMPI)
+#elif defined(SFX_MNH)
+  CALL MPI_BCAST(OCOVER,SIZE(OCOVER),MNHLOG_MPI,NPIO,NCOMM,INFOMPI)
 #endif
 ENDIF
 !
