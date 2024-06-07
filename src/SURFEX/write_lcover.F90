@@ -35,13 +35,19 @@
 !!
 !!    MODIFICATIONS
 !!    -------------
+!!      J. Pianezze 08/2016 replacement of MPI_COMM_WOLRD by NMNH_COMM_WORLD
 !!
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
 !              ------------
 !
+#ifdef MNH_PARALLEL
+USE MODD_VAR_ll, ONLY : NMNH_COMM_WORLD
+#endif
+!
 USE MODD_DATA_COVER_PAR, ONLY : JPCOVER
+USE MODD_SURF_PAR, ONLY: LEN_HREC
 !
 USE MODI_WRITE_SURF
 !
@@ -67,7 +73,7 @@ LOGICAL, DIMENSION(JPCOVER)    :: OCOVER   ! list of covers
 !              -------------------------------
 !
 INTEGER           :: IRESP          ! Error code after reading
-CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 CHARACTER(LEN=100):: YCOMMENT       ! Comment string
 LOGICAL, DIMENSION(JPCOVER)    :: GCOVER   ! tmp list of covers
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
@@ -80,7 +86,7 @@ IF (LHOOK) CALL DR_HOOK('WRITE_LCOVER',0,ZHOOK_HANDLE)
 !
 #ifdef MNH_PARALLEL
 #ifndef NOMPI
-CALL MPI_ALLREDUCE(OCOVER, GCOVER, SIZE(OCOVER),MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, IINFO)
+CALL MPI_ALLREDUCE(OCOVER, GCOVER, SIZE(OCOVER),MPI_LOGICAL, MPI_LOR, NMNH_COMM_WORLD, IINFO)
 OCOVER(:)=GCOVER(:)
 #endif
 #endif

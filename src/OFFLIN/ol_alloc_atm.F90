@@ -56,12 +56,18 @@ USE MODD_FORC_ATM,  ONLY: CSV       ,&! name of all scalar variables
                             XTSURF    ,&
                             XZ0       ,&
                             XZ0H      ,&
-                            XQSURF
-!
+                            XQSURF    ,&
+                            XIMPWET   ,& !Impurity wet deposit coefficient
+                            XIMPDRY   ,&! Impurity dry deposit coefficient
+                            XO3   ,&!   Ozone
+                            XAE    ,&!   Aerosol optoical depth
+                            XZWS     ! significant wave height                (m)
 !
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
+!
+USE MODN_IO_OFFLINE,ONLY : NIMPUROF
 !
 IMPLICIT NONE
 !
@@ -120,6 +126,11 @@ IF (.NOT.ALLOCATED(XTSURF)) ALLOCATE(XTSURF(KNI)     )
 IF (.NOT.ALLOCATED(XZ0)   ) ALLOCATE(XZ0   (KNI)     )
 IF (.NOT.ALLOCATED(XZ0H)  ) ALLOCATE(XZ0H  (KNI)     )
 IF (.NOT.ALLOCATED(XQSURF)) ALLOCATE(XQSURF(KNI)     )
+IF (.NOT.ALLOCATED(XIMPWET))ALLOCATE(XIMPWET   (KNI,NIMPUROF))
+IF (.NOT.ALLOCATED(XIMPDRY))ALLOCATE(XIMPDRY   (KNI,NIMPUROF))
+IF (.NOT.ALLOCATED(XO3)  ) ALLOCATE(XO3  (KNI)     )
+IF (.NOT.ALLOCATED(XAE)) ALLOCATE(XAE(KNI)     )
+IF (.NOT.ALLOCATED(XZWS)) ALLOCATE(XZWS (KNI)     )
 !
 IF (SIZE(CSV)>=1) CSV(1) = '#CO   '
 IF (SIZE(CSV)>=2) CSV(2) = '#O3   '     
@@ -206,6 +217,10 @@ XPS       (:)=XUNDEF ! pressure at atmospheric model surface (Pa)
 XPA       (:)=XUNDEF ! pressure at forcing level             (Pa)
 XZS       (:)=XUNDEF ! atmospheric model orography           (m)
 XCO2      (:)=XUNDEF ! CO2 concentration in the air          (kg/kg)
+XIMPWET (:,:)=XUNDEF
+XIMPDRY (:,:)=XUNDEF
+XO3 (:)      =XUNDEF
+XAE (:)      =XUNDEF
 XSNOW     (:)=XUNDEF ! snow precipitation                    (kg/m2/s)
 XRAIN     (:)=XUNDEF ! liquid precipitation                  (kg/m2/s)
 XSFTH     (:)=XUNDEF ! flux of heat                          (W/m2)
@@ -224,6 +239,7 @@ XTSURF    (:)=XUNDEF ! effective temperature                  (K)
 XZ0       (:)=XUNDEF ! surface roughness length for momentum  (m)
 XZ0H      (:)=XUNDEF ! surface roughness length for heat      (m)
 XQSURF    (:)=XUNDEF ! specific humidity at surface           (kg/kg)
+XZWS      (:)=XUNDEF ! significant wave height                (m)
 !
 IF (LHOOK) CALL DR_HOOK('OL_ALLOC_ATM',1,ZHOOK_HANDLE)
 

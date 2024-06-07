@@ -3,13 +3,14 @@
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 !     #############################################################
-      SUBROUTINE INIT_NATURE_n (DTCO, OREAD_BUDGETC, UG, U, USS, GCP, IM, &
-                                DTZ, DGO, DL, DLC, NDST, SLT, SV,         &
-                                HPROGRAM,HINIT,OLAND_USE, KI,KSV,KSW,     &
-                                HSV,PCO2,PRHOA,PZENITH,PAZIM,PSW_BANDS,   &
-                                PDIR_ALB,PSCA_ALB,PEMIS,PTSRAD,PTSURF,    &
-                                KYEAR, KMONTH,KDAY, PTIME, TPDATE_END,    &
-                                HATMFILE,HATMFILETYPE,HTEST              )  
+      SUBROUTINE INIT_NATURE_n (DTCO, OREAD_BUDGETC, UG, U, USS, GCP, IM,  &
+                                DTZ, DGO, DL, DLC, NDST, DST, SLT, BLOWSNW,&
+                                SV, HPROGRAM, HINIT, KI, KSV, KSW,         &
+                                HSV,PCO2,PRHOA,PZENITH,PAZIM,PSW_BANDS,    &
+                                PDIR_ALB,PSCA_ALB,PEMIS,PTSRAD,PTSURF,     &
+                                PMEGAN_FIELDS,                             &
+                                KYEAR, KMONTH,KDAY, PTIME, TPDATE_END, AT, &
+                                HATMFILE,HATMFILETYPE,HTEST                )  
 !     #############################################################
 !
 !!****  *INIT_NATURE_n* - routine to choose initialization of vegetation scheme
@@ -42,6 +43,9 @@
 !!       V.Masson   15/03/99 new PGD treatment with COVER types
 !        F.Solmon  06/00   adaptation for patch approach
 !!      B. Decharme  04/2013 new coupling variables
+!!       V.Vionnet 2017 blow snow
+!!       P.Tulet     06/16  add MEGAN coupling
+!!      R. Séférian  08/2016 new landuse implementation
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
@@ -59,9 +63,11 @@ USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 USE MODD_SSO_n, ONLY : SSO_t
 USE MODD_GRID_CONF_PROJ_n, ONLY : GRID_CONF_PROJ_t
 USE MODD_DATA_TSZ0_n, ONLY : DATA_TSZ0_t
-USE MODD_DST_n, ONLY : DST_NP_t
+USE MODD_DST_n, ONLY : DST_NP_t, DST_t
 USE MODD_SLT_n, ONLY : SLT_t
 USE MODD_SV_n, ONLY : SV_t
+USE MODD_BLOWSNW_n, ONLY : BLOWSNW_t
+USE MODD_SURF_ATM_TURB_n, ONLY : SURF_ATM_TURB_t
 !
 USE MODD_CSTS,       ONLY : XTT
 !
@@ -89,12 +95,13 @@ TYPE(DIAG_OPTIONS_t), INTENT(INOUT) :: DGO
 TYPE(DIAG_t), INTENT(INOUT) :: DL
 TYPE(DIAG_t), INTENT(INOUT) :: DLC
 TYPE(DST_NP_t), INTENT(INOUT) :: NDST
+TYPE(DST_t), INTENT(INOUT) :: DST
 TYPE(SLT_t), INTENT(INOUT) :: SLT
 TYPE(SV_t), INTENT(INOUT) :: SV
+TYPE(BLOWSNW_t), INTENT(INOUT) :: BLOWSNW
 !
  CHARACTER(LEN=6),                 INTENT(IN)  :: HPROGRAM  ! program calling surf. schemes
  CHARACTER(LEN=3),                 INTENT(IN)  :: HINIT     ! choice of fields to initialize
-LOGICAL,                          INTENT(IN)  :: OLAND_USE ! 
 INTEGER,                          INTENT(IN)  :: KI        ! number of points
 INTEGER,                          INTENT(IN)  :: KSV       ! number of scalars
 INTEGER,                          INTENT(IN)  :: KSW       ! number of short-wave spectral bands
@@ -112,9 +119,12 @@ REAL,             DIMENSION(KI),  INTENT(OUT) :: PTSURF    ! surface effective t
 INTEGER,                          INTENT(IN)  :: KYEAR     ! current year (UTC)
 INTEGER,                          INTENT(IN)  :: KMONTH    ! current month (UTC)
 INTEGER,                          INTENT(IN)  :: KDAY      ! current day (UTC)
-REAL,                             INTENT(IN)  :: PTIME     ! current time since
-                                                          !  midnight (UTC, s)
+REAL,                             INTENT(IN)  :: PTIME     ! current time since midnight (UTC, s)
+!
+REAL,             DIMENSION(KI,IM%MSF%NMEGAN_NBR),INTENT(IN) :: PMEGAN_FIELDS
+!
 TYPE(DATE), INTENT(INOUT) :: TPDATE_END
+TYPE(SURF_ATM_TURB_t), INTENT(IN) :: AT         ! atmospheric turbulence parameters
 !
  CHARACTER(LEN=28),                INTENT(IN)  :: HATMFILE    ! atmospheric file name
  CHARACTER(LEN=6),                 INTENT(IN)  :: HATMFILETYPE! atmospheric file type
@@ -142,13 +152,14 @@ ELSE IF (U%CNATURE=='FLUX  ') THEN
                        KI, KSV, KSW, HSV, PDIR_ALB, PSCA_ALB, PEMIS,   &
                        PTSRAD, PTSURF, 'OK'    )  
 ELSE IF (U%CNATURE=='ISBA  ' .OR. U%CNATURE=='TSZ0') THEN
-  CALL INIT_ISBA_n(DTCO, OREAD_BUDGETC, UG, U, USS, GCP, &
-                   IM, DTZ, NDST, SLT, SV, &
-                   HPROGRAM, HINIT, OLAND_USE, KI, KSV, KSW, HSV, &
-                   PCO2, PRHOA, PZENITH, PAZIM, PSW_BANDS,        &
-                   PDIR_ALB, PSCA_ALB, PEMIS, PTSRAD, PTSURF,     &
-                   KYEAR, KMONTH, KDAY, PTIME, TPDATE_END,        &
-                   HATMFILE, HATMFILETYPE, 'OK'     )  
+  CALL INIT_ISBA_n(DTCO, OREAD_BUDGETC, UG, U, USS, GCP,     &
+                   IM, DTZ, NDST, DST, SLT, BLOWSNW, SV,     &
+                   HPROGRAM, HINIT, KI, KSV, KSW, HSV,       &
+                   PCO2, PRHOA, PZENITH, PAZIM, PSW_BANDS,   &
+                   PDIR_ALB, PSCA_ALB, PEMIS, PTSRAD, PTSURF,&
+                   PMEGAN_FIELDS,                            &
+                   KYEAR, KMONTH, KDAY, PTIME, TPDATE_END,AT,&
+                   HATMFILE, HATMFILETYPE, 'OK'              )  
 END IF
 IF (LHOOK) CALL DR_HOOK('INIT_NATURE_N',1,ZHOOK_HANDLE)
 !

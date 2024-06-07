@@ -173,6 +173,34 @@ $(OBJS0): OPT = $(OPT0)
 
 endif
 ##########################################################
+#           Source MEGAN                                 #
+##########################################################
+ifdef MNH_MEGAN
+DIR_MEGAN      +=  LIB/MEGAN
+CPPFLAGS_MEGAN = -DMNH_MEGAN
+#
+DIR_MASTER  += $(DIR_MEGAN)
+CPPFLAGS    += $(CPPFLAGS_MEGAN)
+INC         += $(INC_MEGAN)
+CPPFLAGS_MNH += -DMNH_MEGAN=${MNH_MEGAN}
+endif
+#
+##########################################################
+#           Source SPARTACUS_SURFACE                     #
+##########################################################
+#
+FUNDEFS += -USPARTACUS_SURFACE_0.6.1
+#
+DIR_SPARTACUS_SURFACE += LIB/SPARTACUS_SURFACE_0.6.1
+FPPFLAGS_SPARTACUS_SURFACE= -DSPARTACUS_SURFACE_0.6.1
+#
+ifdef DIR_SPARTACUS_SURFACE
+DIR_MASTER += $(DIR_SPARTACUS_SURFACE)
+FPPFLAGS   += $(FPPFLAGS_SPARTACUS_SURFACE)
+$(OBJS0): OPT = $(OPT0) 
+endif
+#
+##########################################################
 #           Source LFI                                   #
 ##########################################################
 #RJ: unneeded?
@@ -256,7 +284,6 @@ CPPFLAGS   += $(CPPFLAGS_HOOK)
 INC        += $(INC_HOOK)
 VPATH      += $(DIR_HOOK)
 endif
-
 ##########################################################
 #           Source FM                                    #
 ##########################################################
@@ -277,9 +304,21 @@ endif
 #
 ifneq "$(VER_MPI)" "NOMPI"
 #
-ifneq "$(VER_XIOS)" "0"
+ifeq "$(VER_XIOS)" "2"
 DIR_XIOS?=${SRC_SURFEX}/src/LIB/XIOS-${VERSION_XIOS}-${ARCH}
-#DIR_XIOS?=${SRC_SURFEX}/src/LIB/XIOS-trunk-967-LXgfortran
+LIB_XIOS?=-L$(DIR_XIOS)/lib -lxios -lstdc++
+INC_XIOS?=-I$(DIR_XIOS)/inc
+XIOS_KEY?=${DIR_XIOS}/lib/libxios.a
+#
+LIBS       += $(LIB_XIOS)
+INC        += $(INC_XIOS)
+FPPFLAGS   += -DWXIOS
+VPATH      += $(DIR_XIOS)/inc
+#
+endif
+#
+ifeq "$(VER_XIOS)" "1"
+DIR_XIOS?=/home/gmgec/mrgu/rigoudyg/xios/XIOS-1442--prod-intel18-XIOS_DEV_CMIP6-shuffle
 LIB_XIOS?=-L$(DIR_XIOS)/lib -lxios -lstdc++
 INC_XIOS?=-I$(DIR_XIOS)/inc
 XIOS_KEY?=${DIR_XIOS}/lib/libxios.a
@@ -324,6 +363,21 @@ FPPFLAGS   += $(FPPFLAGS_OASIS)
 LIBS       += $(LIB_OASIS)
 INC        += $(INC_OASIS)
 endif
+
+#
+ifeq "$(VER_OASIS)" "cnrmcm6"
+#
+DIR_OASIS?=/home/gmgec/mrgi/voldoire/SAVE/oasis/oasis-mct-3.0_branch/intel18
+OASIS_PATH?=${DIR_OASIS}
+LIB_OASIS?=-L${OASIS_PATH}/lib -lpsmile.MPI1 -lmct -lmpeu -lscrip
+INC_OASIS?=-I${OASIS_PATH}/build/lib/psmile.MPI1
+OASIS_KEY?=${OASIS_PATH}/build/lib/psmile.MPI1/mod_oasis.mod
+#
+FPPFLAGS_OASIS?= -DCPLOASIS
+VPATH      += ${OASIS_PATH}/build/lib/psmile.MPI1
+#
+endif
+#
 ##########################################################
 #           Source MPIVIDE                               #
 ##########################################################

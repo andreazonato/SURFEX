@@ -189,6 +189,7 @@ INTEGER                     :: JSV     ! loop on scalar variables
 LOGICAL                     :: GCALL_LMO ! flag in non-neutral case
 !
 INTEGER                     :: ILUOUT  ! output listing logical unit
+!
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
 !-------------------------------------------------------------------------------------

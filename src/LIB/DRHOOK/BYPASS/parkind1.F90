@@ -1,7 +1,12 @@
-!SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
-!SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
-!SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
-!SFX_LIC for details. version 1.
+! (C) Copyright 2014- ECMWF.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+!
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+
 MODULE PARKIND1
 !
 !     *** Define usual kinds for strong typing ***
@@ -32,6 +37,20 @@ INTEGER, PARAMETER :: JPIA = JPIM
 INTEGER, PARAMETER :: JPRT = SELECTED_REAL_KIND(2,1)
 INTEGER, PARAMETER :: JPRS = SELECTED_REAL_KIND(4,2)
 INTEGER, PARAMETER :: JPRM = SELECTED_REAL_KIND(6,37)
-INTEGER, PARAMETER :: JPRB = SELECTED_REAL_KIND(13,300)
+! This parameter should always be double precision as a few parts of
+! the radiation code require it
+INTEGER, PARAMETER :: JPRD = SELECTED_REAL_KIND(13,300)
+
+! This parameter governs the precision of most of the code
+#ifdef SINGLE_PRECISION
+INTEGER, PARAMETER :: JPRB = JPRM
+#else
+INTEGER, PARAMETER :: JPRB = JPRD
+#endif
 !
+
+! Logical Kinds for RTTOV....
+
+INTEGER, PARAMETER :: JPLM = JPIM   !Standard logical type
+
 END MODULE PARKIND1

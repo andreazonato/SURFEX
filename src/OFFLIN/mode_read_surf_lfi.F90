@@ -35,7 +35,9 @@ MODULE MODE_READ_SURF_LFI
 !!    MODIFICATIONS
 !!    -------------
 !!
-!!      original                                                     01/08/03
+!!      original         01/08/03
+!!      A.Druel           08/2019: Permit to change the size of caracters (write / read) with constant
+!!
 !----------------------------------------------------------------------------
 !
 INTERFACE READ_SURF0_LFI
@@ -434,6 +436,7 @@ USE MODD_SURFEX_MPI, ONLY : NRANK, NPROC, NCOMM, NPIO, XTIME_NPIO_READ, XTIME_CO
 !
 USE MODD_IO_SURF_LFI, ONLY : CFILE_LFI, CLUOUT_LFI, NMASK, NFULL, &
                              LMNH_COMPATIBLE  
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_PACK_SAME_RANK
 USE MODI_FMREAD
@@ -700,8 +703,9 @@ END SUBROUTINE READ_SURFX2_LFI
 !!****  *READN0* - routine to read an integer
 !!      B. Decharme 07/2011 : Grdid dimension only read in pgd file
 !
-USE MODD_IO_SURF_LFI, ONLY : CFILE_LFI, CLUOUT_LFI, CFILEPGD_LFI, &
-                             LMNH_COMPATIBLE, NIU, NIB, NIE, NJU, NJB, NJE
+USE MODD_IO_SURF_LFI,        ONLY : CFILE_LFI, CLUOUT_LFI, CFILEPGD_LFI, &
+                                    LMNH_COMPATIBLE, NIU, NIB, NIE, NJU, NJB, NJE
+USE MODD_DATA_COVER_PAR,     ONLY : NCAR_FILES
 !
 USE MODI_FMREAD
 USE MODI_ERROR_READ_SURF_LFI
@@ -713,20 +717,20 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=*),  INTENT(IN)  :: HREC     ! name of the article to be read
-INTEGER,            INTENT(OUT) :: KFIELD   ! the integer to be read
-INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem appears
+ CHARACTER(LEN=*),   INTENT(IN)  :: HREC     ! name of the article to be read
+INTEGER,             INTENT(OUT) :: KFIELD   ! the integer to be read
+INTEGER,             INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100), INTENT(OUT) :: HCOMMENT ! comment
 !
 !*      0.2   Declarations of local variables
 !
- CHARACTER(LEN=40) :: YGRID
-INTEGER           :: IGRID   ! position of data on grid
-INTEGER           :: ILENCH  ! length of comment string
-INTEGER           :: IIMAX, IJMAX
-INTEGER           :: INB ! number of articles in the file
-INTEGER           :: IRESP
-REAL(KIND=JPRB) :: ZHOOK_HANDLE
+ CHARACTER(LEN=NCAR_FILES) :: YGRID
+INTEGER                    :: IGRID   ! position of data on grid
+INTEGER                    :: ILENCH  ! length of comment string
+INTEGER                    :: IIMAX, IJMAX
+INTEGER                    :: INB ! number of articles in the file
+INTEGER                    :: IRESP
+REAL(KIND=JPRB)            :: ZHOOK_HANDLE
 !
 IF (LHOOK) CALL DR_HOOK('MODE_READ_SURF_LFI:READ_SURFN0_LFI',0,ZHOOK_HANDLE)
 !
@@ -899,6 +903,7 @@ END SUBROUTINE READ_SURFN1_LFI
 !!****  *READC0* - routine to read a character
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILE_LFI, CLUOUT_LFI
+USE MODD_DATA_COVER_PAR,     ONLY : NCAR_FILES
 !
 USE MODI_FMREAD
 USE MODI_ERROR_READ_SURF_LFI
@@ -910,10 +915,10 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=*),  INTENT(IN)  :: HREC      ! name of the article to be read
- CHARACTER(LEN=40),  INTENT(OUT) :: HFIELD    ! the integer to be read
-INTEGER,            INTENT(OUT) :: KRESP     ! KRESP  : return-code if a problem appears
- CHARACTER(LEN=100), INTENT(OUT) :: HCOMMENT  ! comment
+ CHARACTER(LEN=*),          INTENT(IN)  :: HREC      ! name of the article to be read
+ CHARACTER(LEN=NCAR_FILES), INTENT(OUT) :: HFIELD    ! the integer to be read
+INTEGER,                    INTENT(OUT) :: KRESP     ! KRESP  : return-code if a problem appears
+ CHARACTER(LEN=100),        INTENT(OUT) :: HCOMMENT  ! comment
 !
 !*      0.2   Declarations of local variables
 !
@@ -1070,6 +1075,7 @@ USE MODD_IO_SURF_LFI,  ONLY : CFILE_LFI, CLUOUT_LFI
 !
 USE MODI_FMREAD
 USE MODI_ERROR_READ_SURF_LFI
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -1088,7 +1094,7 @@ INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem 
 
 !*      0.2   Declarations of local variables
 !
- CHARACTER(LEN=12)     :: YREC     ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC)     :: YREC     ! Name of the article to be read
 INTEGER, DIMENSION(3) :: ITDATE
 !
 INTEGER          :: IGRID   ! position of data on grid
@@ -1122,6 +1128,7 @@ END SUBROUTINE READ_SURFT0_LFI
 !!****  *READT0* - routine to read a date
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILE_LFI, CLUOUT_LFI  
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_FMREAD
 USE MODI_ERROR_READ_SURF_LFI
@@ -1143,7 +1150,7 @@ INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem 
 
 !*      0.2   Declarations of local variables
 !
- CHARACTER(LEN=12)     :: YREC     ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC)     :: YREC     ! Name of the article to be read
 INTEGER          :: ILUOUT
 INTEGER          :: IGRID   ! position of data on grid
 INTEGER          :: ILENCH  ! length of comment string
@@ -1177,6 +1184,7 @@ END SUBROUTINE READ_SURFT1_LFI
 !!****  *READT0* - routine to read a date
 !
 USE MODD_IO_SURF_LFI,        ONLY : CFILE_LFI, CLUOUT_LFI  
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_FMREAD
 USE MODI_ERROR_READ_SURF_LFI
@@ -1198,7 +1206,7 @@ INTEGER,            INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem 
 
 !*      0.2   Declarations of local variables
 !
- CHARACTER(LEN=12)     :: YREC     ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC)     :: YREC     ! Name of the article to be read
 INTEGER          :: ILUOUT
 INTEGER          :: IGRID   ! position of data on grid
 INTEGER          :: ILENCH  ! length of comment string

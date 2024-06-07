@@ -3,8 +3,10 @@
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 SUBROUTINE OL_DEFINE_DIM (UG, KSIZE_FULL, HPROGRAM, KLUOUT, KNI, &
+                          TSNOW,                                 &
                           KDIM1, HUNIT1, HUNIT2, PX, PY, KDIMS,  &
-                          KDDIM, HNAME_DIM, KNPATCH, KNSNLAYER, PLAT, PLON)
+                          KDDIM, HNAME_DIM, OSNOWBANDS, KNPATCH, &
+                          KNSNLAYER, PLAT, PLON)
 !     #######################################################
 !!****  *OL_DEFINE_DIM* - 
 !!
@@ -35,13 +37,17 @@ SUBROUTINE OL_DEFINE_DIM (UG, KSIZE_FULL, HPROGRAM, KLUOUT, KNI, &
 !!      Original    06/2010 
 !!      07/2011     add specific computation for IGN grid (B. Decharme)
 !!      09/2015     M. Lafaysse : snow layer dimension
+!!      02/2019     A. Druel    : Permit to change the size of caracters (write / read) with constant
+!!
 !-------------------------------------------------------------------------------                         
 !
 USE MODD_SURF_ATM_GRID_n, ONLY : SURF_ATM_GRID_t
 !
-USE MODD_IO_SURF_OL, ONLY: NMASK_IGN
+USE MODD_IO_SURF_OL,      ONLY : NMASK_IGN
 !
-USE MODN_IO_OFFLINE, ONLY : LWRITE_COORD
+USE MODN_IO_OFFLINE,      ONLY : LWRITE_COORD, LWRITE_TOPO
+!
+USE MODD_DATA_COVER_PAR,  ONLY : NCAR_FILES
 !
 USE MODI_GET_GRID_DIM
 USE MODI_GET_GRID_COORD
@@ -55,6 +61,8 @@ USE MODE_GRIDTYPE_GAUSS
 USE MODE_GRIDTYPE_CARTESIAN
 USE MODE_GRIDTYPE_LONLATVAL
 !
+USE MODD_TYPE_SNOW,ONLY : SURF_SNOW
+USE MODD_CONST_ATM, ONLY :JPNBANDS_ATM
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
 !
@@ -70,6 +78,8 @@ INTEGER, INTENT(IN) :: KSIZE_FULL
  CHARACTER(LEN=6),  INTENT(IN)    :: HPROGRAM
 INTEGER, INTENT(IN)              :: KLUOUT
 INTEGER, INTENT(IN)              :: KNI
+LOGICAL, INTENT(IN)		:: OSNOWBANDS
+TYPE(SURF_SNOW),INTENT(IN)           :: TSNOW
 INTEGER, INTENT(OUT)             :: KDIM1
  CHARACTER(LEN=13) , DIMENSION(:), INTENT(OUT) :: HUNIT1, HUNIT2
 !
@@ -90,6 +100,7 @@ INTEGER                          :: JJ, ILAMBERT, IFULL, IDIM1, IL, IIMAX, IJMAX
 INTEGER                          :: INDIMS, INDIMSMAX, IDIM2, INLATI
 INTEGER                          :: INSNLAYER, INPATCH, ID
 LOGICAL                          :: GRECT     ! T if rectangular grid
+INTEGER                          :: IDIMSNOW
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
 IF (LHOOK) CALL DR_HOOK('OL_DEFINE_DIM',0,ZHOOK_HANDLE)
@@ -109,7 +120,8 @@ IDIM2 = 0
 YTYPE='XY '
 IF (UG%G%CGRID.EQ.'LONLAT REG'.OR.UG%G%CGRID.EQ.'LONLATVAL '.OR.UG%G%CGRID.EQ.'LONLAT ROT') YTYPE='LON'
 !
-IF (.NOT.LWRITE_COORD) THEN
+!
+IF (.NOT.(LWRITE_COORD .OR. LWRITE_TOPO)) THEN
   !
   IF ( UG%G%CGRID.EQ.'CONF PROJ ' .OR. UG%G%CGRID.EQ.'CARTESIAN '&
   .OR. UG%G%CGRID.EQ.'LONLAT REG' .OR. UG%G%CGRID.EQ.'IGN' ) THEN
@@ -142,6 +154,8 @@ ELSEIF (UG%G%CGRID/="LONLATVAL ".AND.(UG%G%CGRID/="IGN       ".OR.IIMAX*IJMAX==I
 ELSE   
   INDIMS = INDIMS + 2
 ENDIF
+!
+IF (OSNOWBANDS) INDIMS=INDIMS+1
 !
 ALLOCATE(KDIMS    (INDIMS))
 ALLOCATE(KDDIM    (INDIMS))
@@ -217,7 +231,7 @@ ELSE
 
   ENDIF
 
-  IF (LWRITE_COORD) THEN
+  IF (LWRITE_COORD .OR. LWRITE_TOPO) THEN
     ALLOCATE(PX(KNI))
     ALLOCATE(PY(KNI))
   ENDIF
@@ -228,7 +242,7 @@ ELSE
 ENDIF
 !
 !
-IF (LWRITE_COORD) THEN
+IF (LWRITE_COORD .OR. LWRITE_TOPO) THEN
   !
   IF (ASSOCIATED(UG%XGRID_FULL_PAR)) THEN
     CALL GET_GRID_COORD(UG%G%CGRID, UG%G%NGRID_PAR, UG%G%XGRID_PAR, KSIZE_FULL, &
@@ -301,20 +315,41 @@ IF ( INPATCH/=0 ) THEN
   KDIMS     (INDIMS-1) = KNPATCH
   HNAME_DIM (INDIMS-1) = 'Number_of_Patches'
 ENDIF
-!
-IF ( INSNLAYER/=0 ) THEN
+
+IF ( OSNOWBANDS) THEN
   ID = 1
   IF (INPATCH/=0) ID = 2
+  KDIMS     (INDIMS-ID) = JPNBANDS_ATM
+  HNAME_DIM (INDIMS-ID) = 'bands'
+ENDIF
+
+!
+IF ( INSNLAYER/=0 ) THEN
+
+  IF (INPATCH/=0) THEN
+    IF (OSNOWBANDS) THEN
+      ID = 3
+    ELSE
+      ID = 2
+    ENDIF 
+  ELSE
+    IF (OSNOWBANDS) THEN
+      ID = 2
+    ELSE
+      ID = 1
+    ENDIF 
+  ENDIF    
+  
   KDIMS     (INDIMS-ID) = INSNLAYER
   HNAME_DIM (INDIMS-ID) = 'snow_layer'
 ENDIF
-!
+
 !
 IF (HPROGRAM/='NOTIME ') THEN
   KDIMS     (INDIMS) = NF90_UNLIMITED
   HNAME_DIM (INDIMS) = 'time'
 ELSE
-  KDIMS     (INDIMS) = 40
+  KDIMS     (INDIMS) = NCAR_FILES
   HNAME_DIM (INDIMS) = 'char_len'
 ENDIF
 !

@@ -48,6 +48,7 @@ USE MODI_READ_SURF
 !
 USE MODD_GRID_GAUSS, ONLY : XILA1, XILO1, XILA2, XILO2, NINLA, NINLO, NILEN, LROTPOLE, &
                             XCOEF, XLAP, XLOP, XILATARRAY
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -66,7 +67,7 @@ INTEGER,           INTENT(OUT)   :: KNI          ! number of points
 !* 0.2 Declaration of local variables
 !      ------------------------------
 !
- CHARACTER(LEN=12) :: YRECFM    ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM    ! Name of the article to be read
 INTEGER           :: IRESP
 !
 !
@@ -151,8 +152,6 @@ ELSE
   LROTPOLE = .TRUE.
 ENDIF
 !
-!XILA1=90.0*(1.0-1.0/(REAL(INLATI)))
-!XILA2=-90.0*(1.0-1.0/(REAL(INLATI)))
 XILA1 = XILATARRAY(1)
 XILA2 = XILATARRAY(INLATI)
 XILO1=0.0

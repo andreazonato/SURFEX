@@ -47,6 +47,7 @@
 USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
 USE MODD_FLAKE_n, ONLY : FLAKE_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_READ_SURF
 !
@@ -75,7 +76,7 @@ INTEGER           :: ILU          ! 1D physical dimension
 !
 INTEGER           :: IRESP          ! Error code after redding
 !
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
 !-------------------------------------------------------------------------------

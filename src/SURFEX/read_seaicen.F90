@@ -36,6 +36,9 @@
 !!    MODIFICATIONS
 !!    -------------
 !!      Original    01/2014
+!!      Modified
+!!       A. Voldoire 09/2016 : Switch to tile the fluxes calculation over sea and seaice
+!!       C. Lebeaupin 01/2020 : add abor1 (case XSEAICE_TSTEP defined but CSEAICE_SCHEME=='NONE' in PREP)
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
@@ -49,7 +52,7 @@ USE MODD_SFX_GRID_n, ONLY : GRID_t
 USE MODD_SEAFLUX_n, ONLY : SEAFLUX_t
 !
 USE MODD_CSTS, ONLY           : XPI, XTTSI, XTT
-USE MODD_SURF_PAR,       ONLY : XUNDEF
+USE MODD_SURF_PAR,       ONLY : XUNDEF, LEN_HREC
 USE MODD_SFX_OASIS,      ONLY : LCPL_SEAICE
 USE MODD_WATER_PAR,      ONLY : XALBSEAICE
 !
@@ -92,13 +95,13 @@ INTEGER,           INTENT(IN)  :: KLUOUT
 !
 INTEGER           :: IRESP          ! Error code after reading
 !
-INTEGER           :: JMTH, INMTH
-CHARACTER(LEN=2 ) :: YMTH
+INTEGER           :: JMTH, INMTH, JDAY, INDAY
+CHARACTER(LEN=2 ) :: YMTH, YDAY
 CHARACTER(LEN=5)  :: YLVL
 !
-CHARACTER(LEN=12) :: YCATEG         ! category to read
-CHARACTER(LEN=12) :: YLEVEL         ! Level to read
-CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+CHARACTER(LEN=LEN_HREC) :: YCATEG         ! category to read
+CHARACTER(LEN=LEN_HREC) :: YLEVEL         ! Level to read
+CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 CHARACTER(LEN=200) :: YMESS         ! Error Message
 !
 INTEGER :: JX,JK,JL                 ! loop counter on ice categories and layers and grid points
@@ -110,16 +113,7 @@ REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !-------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('READ_SEAICE_n',0,ZHOOK_HANDLE)
 !
-IF (.NOT.S%LHANDLE_SIC) THEN 
-   ALLOCATE(S%XSIC(0))
-   IF (LHOOK) CALL DR_HOOK('READ_SEAICE_n',1,ZHOOK_HANDLE)
-   RETURN
-ENDIF
-!
 nx=KLU
-!
-ALLOCATE(S%XSIC(KLU))
-S%XSIC(:)=XUNDEF
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
@@ -127,9 +121,9 @@ S%XSIC(:)=XUNDEF
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
+ALLOCATE(S%XFSIC(KLU))
+!
 IF(S%LINTERPOL_SIC)THEN
-   !
-   ALLOCATE(S%XFSIC(KLU))
    !
    !Precedent, Current, Next, and Second-next Monthly SIC
    INMTH=4   
@@ -148,9 +142,32 @@ IF(S%LINTERPOL_SIC)THEN
      CALL ABOR1_SFX('READ_SEAICE_n: FSIC should be >=0 and <=1') 
    ENDIF                 
    !
+ELSE IF (TRIM(S%CINTERPOL_SIC)=='READAY') THEN
+   !
+   !All days of current month
+   SELECT CASE (S%TTIME%TDATE%MONTH)
+   CASE(4,6,9,11)
+     INDAY=30
+   CASE(1,3,5,7:8,10,12)
+     INDAY=31
+   CASE(2)
+    INDAY=29
+   END SELECT
+
+   ALLOCATE(S%XSIC_MTH(KLU,INDAY))
+   !
+   DO JDAY=1,INDAY
+     WRITE(YDAY,'(I2)') JDAY
+     YRECFM='N_SIC_DD'//ADJUSTL(YDAY(:LEN_TRIM(YDAY)))
+     CALL READ_SURF(HPROGRAM,YRECFM,S%XSIC_MTH(:,JDAY),IRESP)
+   ENDDO
+   S%XFSIC = S%XSIC_MTH(:,S%TTIME%TDATE%DAY)
+   IF (ANY(S%XFSIC(:)>1.0).OR.ANY(S%XFSIC(:)<0.0)) THEN
+     CALL ABOR1_SFX('READ_SEAICE_n: FSIC should be >=0 and <=1') 
+   ENDIF         
+   !
 ELSE
    ! 
-   ALLOCATE(S%XFSIC(0))
    ALLOCATE(S%XSIC_MTH(0,0))
    !
 ENDIF
@@ -164,6 +181,10 @@ ENDIF
 CALL READ_SURF(HPROGRAM,'SEAICE_SCHEM',S%CSEAICE_SCHEME,IRESP)
 !
 IF (TRIM(S%CSEAICE_SCHEME) == 'NONE' ) THEN
+   IF (S%XSEAICE_TSTEP/=XUNDEF) THEN
+     WRITE(KLUOUT,*)'XSEAICE_TSTEP is ',S%XSEAICE_TSTEP,' but CSEAICE_SCHEME read in PREP is ',S%CSEAICE_SCHEME
+     CALL ABOR1_SFX("READ_SEAICE_n: MUST HAVE CSEAICE_SCHEME /= NONE (in PREP) WHEN XSEAICE_TSTEP DEFINED") 
+   ENDIF
    IF (S%LINTERPOL_SIC ) THEN
       S%XTICE=S%XSST
       S%XSIC=S%XFSIC
@@ -202,7 +223,7 @@ nxglo=max(nxglo,1)
 ! Use convention XSIC_EFOLDING_TIME=0 for avoiding any relaxation 
 ! toward SIC observation and impose it.
 !
-IF(S%LINTERPOL_SIC)THEN
+IF(S%LINTERPOL_SIC.OR.TRIM(S%CINTERPOL_SIC)=='READAY')THEN
   IF (S%XSIC_EFOLDING_TIME==0.0) THEN 
      CFSIDMP='PRESCRIBE'
   ELSE
@@ -211,7 +232,7 @@ IF(S%LINTERPOL_SIC)THEN
   ENDIF
 ENDIF
 !
-IF(S%LINTERPOL_SIT)THEN
+IF(S%LINTERPOL_SIT.OR.TRIM(S%CINTERPOL_SIT)=='READAY')THEN
   IF (S%XSIT_EFOLDING_TIME==0.0) THEN 
      CHSIDMP='PRESCRIBE'
   ELSE
@@ -376,9 +397,9 @@ S%TGLT%bat(:,1)=-S%XSEABATHY
 !
 !* Sea ice thickness nudging data
 !
+ALLOCATE(S%XFSIT(KLU))
+!
 IF(S%LINTERPOL_SIT)THEN
-   !
-   ALLOCATE(S%XFSIT(KLU))
    !
    !Precedent, Current, Next, and Second-next Monthly SIT
    INMTH=4   
@@ -393,9 +414,29 @@ IF(S%LINTERPOL_SIT)THEN
    !
    CALL INTERPOL_SST_MTH(S,'H')
    !
+ELSE IF (TRIM(S%CINTERPOL_SIT)=='READAY') THEN
+   !
+   !All days of current month
+      SELECT CASE (S%TTIME%TDATE%MONTH)
+   CASE(4,6,9,11)
+     INDAY=30
+   CASE(1,3,5,7:8,10,12)
+     INDAY=31
+   CASE(2)
+    INDAY=29
+   END SELECT
+   
+   ALLOCATE(S%XSIT_MTH(KLU,INDAY))
+   !
+   DO JDAY=1,INDAY
+     WRITE(YDAY,'(I2)') JDAY
+     YRECFM='N_SIT_DD'//ADJUSTL(YDAY(:LEN_TRIM(YDAY)))
+     CALL READ_SURF(HPROGRAM,YRECFM,S%XSIT_MTH(:,JDAY),IRESP)
+   ENDDO
+   S%XFSIT = S%XSIT_MTH(:,S%TTIME%TDATE%DAY)
+   !
 ELSE
-   ! 
-   ALLOCATE(S%XFSIT(0))
+   !
    ALLOCATE(S%XSIT_MTH(0,0))
    !
 ENDIF
@@ -422,7 +463,7 @@ SUBROUTINE CHECK_SEAICE(HFIELD,PFIELD)
 !
 IMPLICIT NONE
 !
-CHARACTER(LEN=12),  INTENT(IN) :: HFIELD
+CHARACTER(LEN=LEN_HREC),  INTENT(IN) :: HFIELD
 REAL, DIMENSION(:), INTENT(IN) :: PFIELD
 !
 REAL            :: ZMAX,ZMIN

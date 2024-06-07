@@ -40,6 +40,7 @@
 !!
 !!      Original   12/2003
 !!                 03/2014 (B. Vincendon) use of the number of pixels included in a mesh and a watershed
+!!                 07/2017 (B. Vincendon) more control for UNDEF variables ded in a mesh and a watershed
 !! 
 !!    WARNING
 !!    ----------------
@@ -56,7 +57,7 @@ USE MODD_SURF_PAR,        ONLY: NUNDEF,XUNDEF
 !
 USE MODI_ABOR1_SFX
 !
-USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
+USE YOMHOOK   ,ONLY : LHOOK, DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
 !
 IMPLICIT NONE
@@ -73,7 +74,7 @@ REAL, DIMENSION(:,:), INTENT(OUT)   :: PHT   ! water content variation to provid
 !
 LOGICAL, DIMENSION(NNCAT,SIZE(NMASKI,3)) :: GTEST
 INTEGER            :: J1,J2,J3,J4     ! loop control 
-INTEGER            :: INBSAT, INBALL
+INTEGER            :: INBSAT
 !
 REAL                           :: ZREST            ! m
 REAL                           :: ZWNEW            ! m3/m3
@@ -100,33 +101,41 @@ DO J3 = 1,KI
       J2 = NMASKI(J3,J1,J4)
       DO WHILE (J2 /= NUNDEF .AND. J4<=NNBV_IN_MESH(J3,J1) )
         !
-        IF ( NMASKT(J1,J2) /= NUNDEF ) THEN
+        IF ( NMASKT(J1,J2) /= NUNDEF .AND. XWSTOPT(J1,J2)/=XUNDEF.AND.&
+            XWTOPT(J1,J2)/=XUNDEF .AND. PHI(J3)/=XUNDEF .AND.&
+            XDTOPT(J1,J2)/=XUNDEF .AND. XWFCTOPT(J1,J2)/=XUNDEF) THEN
           !
           ZWNEW = XWTOPT(J1,J2) + PHI(J3) / XDTOPT(J1,J2)
           !
           IF ( ZWNEW >= XWFCTOPT(J1,J2) ) THEN
             !
-            ! on reste au-dessus de la capacite au champ, malgre l'assechement
-            IF (XDMAXFC(J1,J2)/=XUNDEF) XDMAXT(J1,J2) = XDMAXFC(J1,J2) 
-            PHT(J1,J2) = (ZWNEW - XWFCTOPT(J1,J2)) * XDTOPT(J1,J2)
+            ! Staying above field capacity, despite it is dryer
+            IF (XDMAXFC(J1,J2)/=XUNDEF) THEN
+             XDMAXT(J1,J2) = XDMAXFC(J1,J2) 
+             PHT(J1,J2) = (ZWNEW - XWFCTOPT(J1,J2)) * XDTOPT(J1,J2)
+            ENDIF
             !
-          ELSE ! on passe au-dessous de la capacite au champ
+          ELSE ! Wetter than field Capacity
             !
-            IF (XWSTOPT(J1,J2)/=XUNDEF) &
-                    XDMAXT(J1,J2) = (XWSTOPT(J1,J2) - ZWNEW) * XDTOPT(J1,J2)
-            PHT(J1,J2) = 0.0
+            IF (XWSTOPT(J1,J2)/=XUNDEF) THEN
+              XDMAXT(J1,J2) = (XWSTOPT(J1,J2) - ZWNEW) * XDTOPT(J1,J2)
+              PHT(J1,J2) = 0.0
+              IF (XDMAXT(J1,J2)>5) THEN
+                write(*,*)'cas2',ZWNEW, PHI(J3),XWTOPT(J1,J2), XDTOPT(J1,J2)
+                stop
+              ENDIF
+            ENDIF
             !
           ENDIF
           !
-          J4 = J4+1
-          IF ( J4<=SIZE(NMASKI,3) ) J2 = NMASKI(J3,J1,J4)
           !
-        ELSE ! pixel non défini dans Isba
+        ELSE ! Undefined pixel in Isba
           !
           XDMAXT(J1,J2) = 0.0
-          PHT = 0.0
-          !
+          PHT(J1,J2) = 0.0
         ENDIF
+        J4 = J4+1
+        IF ( J4<=SIZE(NMASKI,3) ) J2 = NMASKI(J3,J1,J4)
         !
       ENDDO
       !
@@ -148,11 +157,14 @@ DO J3 = 1,KI
         !
         DO WHILE ( J2/=NUNDEF .AND. J4<=NNBV_IN_MESH(J3,J1) )
           !
-          IF ( GTEST(J1,J4) .AND. NMASKT(J1,J2)/=NUNDEF ) THEN
+          IF ( GTEST(J1,J4) .AND.& 
+               NMASKT(J1,J2)/= NUNDEF .AND. XWSTOPT(J1,J2)/=XUNDEF.AND.&
+               XWTOPT(J1,J2)/=XUNDEF .AND. PHI(J3)/=XUNDEF .AND.&
+               XDTOPT(J1,J2)/=XUNDEF .AND. XWFCTOPT(J1,J2)/=XUNDEF) THEN
             !
             ZWNEW = XWTOPT(J1,J2) + PHI(J3) / XDTOPT(J1,J2)
             !
-            IF ( XWTOPT(J1,J2) == XWSTOPT(J1,J2) ) THEN ! pixel déjà saturé
+            IF ( XWTOPT(J1,J2) == XWSTOPT(J1,J2) ) THEN ! pixel already saturated
               !
               XDMAXT(J1,J2) = 0.0
               PHT(J1,J2) = 0.0
@@ -161,7 +173,7 @@ DO J3 = 1,KI
               !
             ELSE IF ( ( XWSTOPT(J1,J2) - XWTOPT(J1,J2) ) * XDTOPT(J1,J2) <= PHI(J3) ) THEN
               !
-              ! pixel va se saturer
+              ! pixel will become saturated
               XDMAXT(J1,J2) = XDMAXFC(J1,J2)
               PHT(J1,J2) = ( XWSTOPT(J1,J2) - XWFCTOPT(J1,J2) ) * XDTOPT(J1,J2)
               ZREST = ZREST + PHI(J3) - PHT(J1,J2)
@@ -169,31 +181,30 @@ DO J3 = 1,KI
               !
             ELSE IF ( XWTOPT(J1,J2) < XWFCTOPT(J1,J2) ) THEN 
               !
-              ! en dessous de la capacité au champ avant d'ajouter la recharge
+              ! below field capacity before  adding recharge
               IF ( (XWTOPT(J1,J2) + PHI(J3)/XDTOPT(J1,J2)) <= XWFCTOPT(J1,J2) ) THEN 
                 !
-                ! en dessous de la capacité au champ avec la recharge 
+                !  below field capacity after  adding recharge
                 XDMAXT(J1,J2) = ( XWSTOPT(J1,J2) - ZWNEW ) * XDTOPT(J1,J2)
                 PHT(J1,J2) = 0.0
                 !
-              ELSE ! au-dessus de la capacité au champ avec la recharge
-                !
+              ELSE ! above field capacity after  adding recharge                 !
                 XDMAXT(J1,J2) = XDMAXFC(J1,J2)
                 PHT(J1,J2) = ( ZWNEW - XWFCTOPT(J1,J2) ) * XDTOPT(J1,J2)
                 !
               ENDIF
               !
-            ELSE ! au-dessus de la capacité au champ avant d'ajouter la recharge
+            ELSE !  above field capacity before  adding recharge
               !
               XDMAXT(J1,J2) = XDMAXFC(J1,J2)
               PHT(J1,J2) = ( ZWNEW - XWFCTOPT(J1,J2) ) * XDTOPT(J1,J2)
               !
             ENDIF
             !
-          ELSE IF ( NMASKT(J1,J2)==NUNDEF ) THEN! pixel non défini dans Isba
+          ELSE IF ( NMASKT(J1,J2)==NUNDEF ) THEN! undefined pixel in Isba grid
             !
             XDMAXT(J1,J2) = 0.0
-            PHT = 0.0
+            PHT(J1,J2) = 0.0
             !
           ENDIF
           !
@@ -206,20 +217,19 @@ DO J3 = 1,KI
       !
       IF ( ZREST/=0.0 ) THEN
         !
-        INBSAT=COUNT(.NOT.GTEST) !nb de pixels saturés avec ou sans la recharge
+        INBSAT=COUNT(.NOT.GTEST) !number of saturated  pixels
         !
         IF ( INBSAT == NNPIX(J3) ) THEN
           !
           IF (NNPIX(J3) > 400 ) THEN
-            WRITE(*,*) 'MAILLE NUM=',J3, 'nb pix tot=',NNPIX(J3)
-           ! CALL ABOR1_SFX("RECHARGE_SURF_TOPD: TOO MANY PIXELS SATURATED ")
+            WRITE(654,*) 'MAILLE NUM=',J3, 'nb pix tot=',NNPIX(J3)
           ELSE
             ZREST=0.0
           ENDIF
           !
         ELSE
           !
-          PHI(J3) = PHI(J3) + ( ZREST / (NNPIX(J3) - INBSAT) ) ! nouvelle recharge à distribuer
+          PHI(J3) = PHI(J3) + ( ZREST / (NNPIX(J3) - INBSAT) ) ! new recharge to distribute
           !
         ENDIF
       ENDIF

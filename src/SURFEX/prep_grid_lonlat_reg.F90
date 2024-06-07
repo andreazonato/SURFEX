@@ -44,6 +44,7 @@
 USE MODI_READ_SURF
 !
 USE MODD_GRID_LATLONREGUL, ONLY : XILAT1,XILON1,XILAT2,XILON2,NINLAT,NINLON,NILENGTH,XILATARRAY
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -62,7 +63,7 @@ INTEGER,           INTENT(OUT)   :: KNI          ! number of points
 !* 0.2 Declaration of local variables
 !      ------------------------------
 !
- CHARACTER(LEN=12) :: YRECFM    ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM    ! Name of the article to be read
 INTEGER           :: IRESP
 !
 INTEGER :: JL        ! loop counter

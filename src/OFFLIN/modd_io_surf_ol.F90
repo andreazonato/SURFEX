@@ -27,6 +27,7 @@
 !!    -------------
 !!      modified 04/04 by P. LeMoigne: add logical for town, sea and water
 !!      modified 07/11 by B. Decharme: add mask for IGN grid
+!!      modified 03/20 by B. Decharme: add NEND_ATM for forcing interpolation
 !
 !*       0.   DECLARATIONS
 !             ------------
@@ -46,9 +47,11 @@ LOGICAL                       :: LTIME_WRITTEN
 INTEGER                       :: XTYPE
 INTEGER                       :: XSTART,XCOUNT,XSTRIDE
 INTEGER                       :: XSTARTW,XCOUNTW
+INTEGER                       :: NEND_ATM       
 !
-LOGICAL :: LDEF
+LOGICAL :: LDEF 
 INTEGER :: NID_NC
+LOGICAL :: LRESET_DIAG = .TRUE.  ! if true diagnostics are reinitialised
 !
 INTEGER, DIMENSION(:),ALLOCATABLE :: NMASK_IGN
 

@@ -1,6 +1,6 @@
-!SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
+!SFX_LIC Copyright 2012-2019 CNRS, Meteo-France and Universite Paul Sabatier
 !SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
-!SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
+!SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt
 !SFX_LIC for details. version 1.
 !#################################################################################
 SUBROUTINE READ_PGD_NETCDF (UG, U, USS, &
@@ -26,17 +26,21 @@ SUBROUTINE READ_PGD_NETCDF (UG, U, USS, &
 !!    MODIFICATIONS
 !!    -------------
 !!      Original    11/2012
+!!      A. Druel    02/2019 Changes (with irrigation). But not sure to be still important.
+!!
+!  P. Wautelet 19/09/2019: correct support of 64bit integers (MNH_INT=8)
 !!------------------------------------------------------------------
 !
 !
+use modd_netcdf_sfx, only : IDCDF_KIND
 USE MODD_SURF_ATM_GRID_n, ONLY : SURF_ATM_GRID_t
-USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
-USE MODD_SSO_n, ONLY : SSO_t
+USE MODD_SURF_ATM_n,      ONLY : SURF_ATM_t
+USE MODD_SSO_n,           ONLY : SSO_t
 !
 USE MODI_ABOR1_SFX
 
 USE MODI_READ_AND_SEND_MPI
-USE MODE_READ_CDF, ONLY :HANDLE_ERR_CDF
+USE MODE_READ_CDF,        ONLY :HANDLE_ERR_CDF
 ! USE MODD_PGD_GRID,       ONLY : NL ! grid dimension length
 USE MODI_PT_BY_PT_TREATMENT
 USE MODI_GET_LUOUT
@@ -61,7 +65,7 @@ TYPE(SSO_t), INTENT(INOUT) :: USS
  CHARACTER(LEN=6),  INTENT(IN) :: HSUBROUTINE   ! Name of the subroutine to call
  CHARACTER(LEN=28), INTENT(IN) :: HFILENAME     ! Name of the field file.
  CHARACTER(LEN=20),   INTENT(IN)  :: HFIELD     ! name of variable
-REAL,DIMENSION(:),INTENT(OUT),OPTIONAL :: PFIELD ! output a variable
+REAL,DIMENSION(:),INTENT(INOUT),OPTIONAL :: PFIELD ! output a variable
 
 REAL,DIMENSION(:),POINTER  :: ZLAT,ZLON
 REAL,DIMENSION(:),POINTER  :: ZLAT2D,ZLON2D
@@ -73,11 +77,12 @@ REAL, DIMENSION(:), ALLOCATABLE :: ZFIELD0
 !
 ! CHARACTER(LEN=28) :: YNCVAR
 !
-INTEGER::IERROR !error status
-INTEGER::ID_FILE ! id of netcdf file
-INTEGER::INFIELD,INLAT,INLON ! dimension lengths
+INTEGER(kind=IDCDF_KIND)::IERROR !error status
+INTEGER(kind=IDCDF_KIND)::ID_FILE ! id of netcdf file
+INTEGER(kind=IDCDF_KIND)::INFIELD,INLAT,INLON ! dimension lengths
 INTEGER::ILUOUT
 INTEGER::JPOINT !loop counter
+CHARACTER(LEN=20) :: HFIELD_LOC
 !
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
@@ -85,8 +90,18 @@ IF (LHOOK) CALL DR_HOOK('READ_PGD_NETCDF',0,ZHOOK_HANDLE)
 !
 CALL GET_LUOUT(HPROGRAM,ILUOUT)
 !
-SELECT CASE (TRIM(HFIELD))
-  CASE ('ZS','slope')
+IF (index( HFIELD , ":" )/=0) THEN
+  HFIELD_LOC=HFIELD(1:index(HFIELD,":")-1) 
+  HFIELD_LOC(index(HFIELD,":"):20)=' '
+!  HFIELD=HFIELD(1:index(HFIELD,":")-1)
+ELSE
+  HFIELD_LOC=HFIELD
+ENDIF
+!
+SELECT CASE (TRIM(HFIELD_LOC))
+  CASE ('ZS','slope','aspect')
+  CASE ('IRRIGTYPE: irrigatio')
+  CASE ('IRRIGTYPE')
   CASE DEFAULT
     CALL ABOR1_SFX('READ_PGD_NETCDF: '//TRIM(HFIELD)//" initialization not implemented !")
 END SELECT
@@ -97,14 +112,14 @@ END SELECT
 !
 !*      2.     Reading of field
 !              ----------------
-
+!
 ! Open netcdf file
 IERROR=NF90_OPEN(HFILENAME,NF90_NOWRITE,ID_FILE)
 CALL HANDLE_ERR_CDF(IERROR,"can't open file "//TRIM(HFILENAME))
 
 CALL READ_FIELD_NETCDF(ID_FILE,'LAT                 ',ZLAT,INLAT)
 CALL READ_FIELD_NETCDF(ID_FILE,'LON                 ',ZLON,INLON)
-CALL READ_FIELD_NETCDF(ID_FILE,HFIELD,ZFIELD,INFIELD)
+CALL READ_FIELD_NETCDF(ID_FILE,HFIELD_LOC,ZFIELD,INFIELD)
 
 ! Close netcdf file
 IERROR=NF90_CLOSE(ID_FILE)
@@ -131,6 +146,18 @@ ELSE
 
   ALLOCATE(ZLAT2D(INFIELD))
   ALLOCATE(ZLON2D(INFIELD))
+
+  IF (INLAT*INLON==INFIELD) THEN
+    DO JPOINT=1,INFIELD
+      ZLAT2D(JPOINT)=ZLAT((JPOINT-1)/INLON+1)
+      ZLON2D(JPOINT)=ZLON(MOD(JPOINT-1,INLON)+1)
+    END DO
+  ELSEIF ((INLAT==INFIELD) .AND. (INFIELD==INLON)) THEN
+    ZLAT2D(:)=ZLAT(:)
+    ZLON2D(:)=ZLON(:)
+  ELSE
+    CALL ABOR1_SFX('READ_PGD_NETCDF: problem with dimensions lengths between LAT LON and FIELD')
+  END IF
 
   IF (INLAT*INLON==INFIELD) THEN
     CALL ABOR1_SFX('READ_PGD_NETCDF: 1D LAT and LON not implemented')
@@ -175,17 +202,17 @@ USE NETCDF
 IMPLICIT NONE
 
 
-INTEGER,INTENT(IN)::ID_FILE
+INTEGER(kind=IDCDF_KIND),INTENT(IN)::ID_FILE
  CHARACTER(LEN=20),   INTENT(IN)  :: HFIELD     ! name of variable
 REAL,DIMENSION(:),POINTER::PFIELD
 
-INTEGER::ID_VAR ! Netcdf IDs for file and variable
-INTEGER::INVARDIMS !number of dimensions of netcdf input variable
-INTEGER,DIMENSION(:),ALLOCATABLE::IVARDIMSID
-INTEGER::ILENDIM1,ILENDIM2
-INTEGER,INTENT(OUT)::ILENDIM
-INTEGER::IERROR !error status
-INTEGER::ITYPE
+INTEGER(kind=IDCDF_KIND)::ID_VAR ! Netcdf IDs for file and variable
+INTEGER(kind=IDCDF_KIND)::INVARDIMS !number of dimensions of netcdf input variable
+INTEGER(kind=IDCDF_KIND),DIMENSION(:),ALLOCATABLE::IVARDIMSID
+INTEGER(kind=IDCDF_KIND)::ILENDIM1,ILENDIM2
+INTEGER(kind=IDCDF_KIND),INTENT(OUT)::ILENDIM
+INTEGER(kind=IDCDF_KIND)::IERROR !error status
+INTEGER(kind=IDCDF_KIND)::ITYPE
 
 ! Look for variable ID for HFIELD
 IERROR=NF90_INQ_VARID(ID_FILE,TRIM(HFIELD),ID_VAR)
@@ -229,14 +256,23 @@ DEALLOCATE(IVARDIMSID)
 ALLOCATE(PFIELD(ILENDIM))
 
 IERROR=NF90_INQUIRE_VARIABLE(ID_FILE,ID_VAR,XTYPE=ITYPE)
-IF (ITYPE/=NF90_DOUBLE) THEN
-  CALL ABOR1_SFX('READ_PGD_NETCDF: incorrect type for variable '//TRIM(HFIELD))
-END IF
 
-! Read 1D variable
-IERROR=NF90_GET_VAR(ID_FILE,ID_VAR,PFIELD)
+SELECT CASE (INVARDIMS)
+  CASE (1)
+    ! Read 1D variable
+    IERROR=NF90_GET_VAR(ID_FILE,ID_VAR,PFIELD)
+    CALL HANDLE_ERR_CDF(IERROR,"can't read variable 1D"//TRIM(HFIELD))
 
-CALL HANDLE_ERR_CDF(IERROR,"can't read variable "//TRIM(HFIELD))
+  CASE (2)
+    ! Read 2D variable
+    IERROR=NF90_GET_VAR(ID_FILE,ID_VAR,PFIELD,count=(/ILENDIM1,ILENDIM2/))
+    CALL HANDLE_ERR_CDF(IERROR,"can't read variable 2D"//TRIM(HFIELD))
+
+  CASE DEFAULT
+    CALL ABOR1_SFX('READ_PGD_NETCDF: incorrect number of dimensions for variable (read step) '//TRIM(HFIELD))
+
+END SELECT
+
 
 END SUBROUTINE READ_FIELD_NETCDF
 

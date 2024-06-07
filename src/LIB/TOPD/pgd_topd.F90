@@ -43,10 +43,13 @@ USE MODD_TOPD_PAR, ONLY : NUNIT
 USE MODD_TOPODYN,         ONLY : CCAT, NNCAT, XRTOP_D2, NMESHT, XDXT
 USE MODD_COUPLING_TOPD,   ONLY : LCOUPL_TOPD, NIMAX, NJMAX, &
                                  XXI, XYI, NMASKI, NMASKT, NNPIX,&
-                                 NNBV_IN_MESH, XBV_IN_MESH, XTOTBV_IN_MESH
+                                 NNBV_IN_MESH, XBV_IN_MESH, XTOTBV_IN_MESH,&
+                                 LDUMMY_SUBCAT,LSUBCAT,NSUBCAT,&
+                                 XLX,XLY,CSUBCAT,&
+                                 CFILE_SUBCAT, LWRITE_SEVERITY_MAPS
 USE MODD_DUMMY_EXP_PROFILE, ONLY : XF_PARAM_BV, XC_DEPTH_RATIO_BV
 !
-USE MODD_SURF_PAR,          ONLY : NUNDEF
+USE MODD_SURF_PAR,          ONLY : XUNDEF,NUNDEF
 !
 !
 USE MODE_GRIDTYPE_CONF_PROJ
@@ -81,10 +84,12 @@ REAL, DIMENSION(:), INTENT(IN) :: PGRID_PAR
 !
 CHARACTER(LEN=*),  INTENT(IN)     :: HPROGRAM    !
 !
-CHARACTER(LEN=50),DIMENSION(NNCAT) :: CNAME
+!
+!*      0.2    declarations of local variables
+!
 INTEGER                   :: IL                     ! number of points
 INTEGER                   :: JJ,JI,JK,JWRK ! loop control 
-INTEGER                   :: JCAT,JMESH,JPIX ! loop control 
+INTEGER                   :: JCAT,JMESH ! loop control 
 INTEGER                           :: ILUOUT       ! Logical unit for output filr
 INTEGER                           :: IMESHL       !  number of ISBA grid nodes
 INTEGER                           :: ILAMBERT     ! Lambert projection type
@@ -93,7 +98,7 @@ REAL, DIMENSION(:), ALLOCATABLE   :: ZXI, ZYI     ! natural coordinates of ISBA 
 REAL, DIMENSION(:), ALLOCATABLE   :: ZDXI, ZDYI   ! Isba grid resolution in the conformal projection
 REAL, DIMENSION(:), ALLOCATABLE   :: ZXN, ZYN     ! isba nodes coordinates in the Lambert II coordinates
 REAL, DIMENSION(:), ALLOCATABLE   :: ZLAT,ZLON    ! Isba nodes geographical coordinates
-REAL, DIMENSION(:), ALLOCATABLE   :: ZDTAV        ! Averaged depth soil on TOP-LAT grid
+
 REAL                              :: ZLAT0    ! reference latitude
 REAL                              :: ZLON0    ! reference longitude
 REAL                              :: ZLONMIN,ZLONMAX  ! min and max longitude values (latlon coordinates)
@@ -114,7 +119,11 @@ IF (LHOOK) CALL DR_HOOK('PGD_TOPD',0,ZHOOK_HANDLE)
 !
 CALL GET_LUOUT(HPROGRAM,ILUOUT)
 !  
-CALL READ_NAM_PGD_TOPD(HPROGRAM,LCOUPL_TOPD,CCAT,XF_PARAM_BV,XC_DEPTH_RATIO_BV)
+CALL READ_NAM_PGD_TOPD(HPROGRAM,LCOUPL_TOPD,CCAT,&
+                        XF_PARAM_BV,XC_DEPTH_RATIO_BV,&
+                        LDUMMY_SUBCAT,LSUBCAT,NSUBCAT,&
+                        XLX,XLY,CSUBCAT,&
+                        CFILE_SUBCAT,LWRITE_SEVERITY_MAPS)
 !
 IF (LCOUPL_TOPD .AND. (HISBA/='3-L'.AND. HISBA/='DIF')) &
   CALL ABOR1_SFX("PGD_TOPD: coupling with topmodel only runs with CISBA=3-L or CISBA=DIF  ")
@@ -365,9 +374,6 @@ IF (LCOUPL_TOPD) THEN
     ZF_PARAM=2.5
     ZC_DEPTH_RATIO=1.
   ENDWHERE
-  !
-  !write(*,*) 'f min max isba',MINVAL(ZF_PARAM),MAXVAL(ZF_PARAM)
-  !write(*,*) 'dc min max isba',MINVAL(ZC_DEPTH_RATIO),MAXVAL(ZC_DEPTH_RATIO)
   !
   CALL OPEN_FILE('ASCII ',NUNIT,'carte_f_dc.txt','FORMATTED',HACTION='WRITE')
   DO JMESH=1,KDIM_FULL

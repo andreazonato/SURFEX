@@ -51,6 +51,7 @@
 !
 USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODD_ASSIM, ONLY : LASSIM, LREAD_ALL
 !
@@ -86,7 +87,7 @@ INTEGER           :: IVERSION       ! surface version
 !
 LOGICAL :: GREAD_ALL
 !
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
 !-------------------------------------------------------------------------------

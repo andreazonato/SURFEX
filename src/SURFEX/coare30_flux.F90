@@ -5,7 +5,7 @@
 !     #########
     SUBROUTINE COARE30_FLUX (S,PZ0SEA,PTA,PEXNA,PRHOA,PSST,PEXNS,PQA,  &
             PVMOD,PZREF,PUREF,PPS,PQSAT,PSFTH,PSFTQ,PUSTAR,PCD,PCDN,PCH,PCE,PRI,&
-            PRESA,PRAIN,PZ0HSEA)  
+            PRESA,PRAIN,PZ0HSEA,PHS,PTP)  
 !     #######################################################################
 !
 !
@@ -54,6 +54,10 @@
 !!      J.Escobar      06/2013  for REAL4/8 add EPSILON management
 !!      C. Lebeaupin   03/2014 bug if PTA=PSST and PEXNA=PEXNS: set a minimum value
 !!                             add abort if no convergence
+!!      M.N. Bouin     03/2014 possibility of wave parameters from external source
+!!                             and bounds Z0
+!!      J. Pianezze    11/2014 add coupling wave parameters 
+!!      C. Lebeaupin   02/2020 ZVMOD for wave parameters 
 !-------------------------------------------------------------------------------
 !
 !*       0.     DECLARATIONS
@@ -66,6 +70,8 @@ USE MODD_CSTS,       ONLY : XKARMAN, XG, XSTEFAN, XRD, XRV, XPI, &
                             XLVTT, XCL, XCPD, XCPV, XRHOLW, XTT, &
                             XP00
 USE MODD_SURF_ATM,   ONLY : XVZ0CM
+!
+USE MODD_SFX_OASIS,  ONLY : LCPL_WAVE
 !
 USE MODD_SURF_PAR,   ONLY : XUNDEF, XSURF_EPSILON
 USE MODD_WATER_PAR
@@ -102,6 +108,8 @@ REAL, DIMENSION(:), INTENT(IN)       :: PSST  ! Sea Surface Temperature (K)
 REAL, DIMENSION(:), INTENT(IN)       :: PEXNS ! Exner function at sea surface
 REAL, DIMENSION(:), INTENT(IN)       :: PPS   ! air pressure at sea surface (Pa)
 REAL, DIMENSION(:), INTENT(IN)       :: PRAIN !precipitation rate (kg/s/m2)
+REAL, DIMENSION(:), INTENT(IN)       :: PHS   ! wave significant height
+REAL, DIMENSION(:), INTENT(IN)       :: PTP   ! wave peak period
 !
 REAL, DIMENSION(:), INTENT(INOUT)    :: PZ0SEA! roughness length over the ocean
 !                                                                                 
@@ -307,6 +315,12 @@ ZUSR(:) = ZDUWG(:)*XKARMAN/(LOG(PUREF(:)/ZO10(:))-PSIFCTU(PUREF(:)/ZL10(:)))
 ZTSR(:) = -ZDT(:)*XKARMAN/(LOG(PZREF(:)/ZOT10(:))-PSIFCTT(PZREF(:)/ZL10(:)))
 ZQSR(:) = -ZDQ(:)*XKARMAN/(LOG(PZREF(:)/ZOT10(:))-PSIFCTT(PZREF(:)/ZL10(:)))
 !
+IF (LCPL_WAVE .AND. .NOT. (ANY(S%XCHARN==0.0)) ) THEN
+  ZCHARN(:) = S%XCHARN(:)
+ELSE
+  ZCHARN(:) = 0.011
+END IF
+!
 ZZL(:) = 0.0
 !
 DO J=1,SIZE(PTA)
@@ -317,15 +331,26 @@ DO J=1,SIZE(PTA)
     ITERMAX(J) = 3 !number of iterations
   ENDIF
   !
-  !then modify Charnork for high wind speeds Chris Fairall's data
-  IF (ZDUWG(J)>10.) ZCHARN(J) = 0.011 + (0.018-0.011)*(ZDUWG(J)-10.)/(18.-10.)
-  IF (ZDUWG(J)>18.) ZCHARN(J) = 0.018
+  IF (.NOT.LCPL_WAVE) THEN
+    !then modify Charnork for high wind speeds Chris Fairall's data
+    IF (ZDUWG(J)>10.) ZCHARN(J) = 0.011 + (0.018-0.011)*(ZDUWG(J)-10.)/(18-10)
+    IF (ZDUWG(J)>18.) ZCHARN(J) = 0.018
+  END IF
   !
   !                3.  ITERATIVE LOOP TO COMPUTE USR, TSR, QSR 
   !                -------------------------------------------
   !
-  ZHWAVE(J) = 0.018*ZVMOD(J)*ZVMOD(J)*(1.+0.015*ZVMOD(J))
-  ZTWAVE(J) = 0.729*ZVMOD(J)
+  IF (S%LWAVEWIND .AND. .NOT. LCPL_WAVE) THEN
+    ZHWAVE(J) = 0.018*ZVMOD(J)*ZVMOD(J)*(1.+0.015*ZVMOD(J))
+    ZTWAVE(J) = 0.729*ZVMOD(J)
+  ELSE 
+    ZHWAVE(J) = PHS(J)
+    ZTWAVE(J) = PTP(J)
+    ! to avoid the nullity of HS and TP 
+    IF (ZHWAVE(J) .EQ. 0.0) ZHWAVE(J) = 0.018*ZVMOD(J)*ZVMOD(J)*(1.+0.015*ZVMOD(J))
+    IF (ZTWAVE(J) .EQ. 0.0) ZTWAVE(J) = 0.729*ZVMOD(J)
+  ENDIF 
+!
   ZCWAVE(J) = XG*ZTWAVE(J)/(2.*XPI)
   ZLWAVE(J) = ZTWAVE(J)*ZCWAVE(J)
   !
@@ -505,6 +530,8 @@ PRESA(:) = 1. / MAX(ZAC(:),XSURF_EPSILON)
 !       5.3 Z0 and Z0H over sea
 !
 PZ0SEA(:) =  ZCHARN(:) * ZUSTAR2(:) / XG + XVZ0CM * PCD(:) / PCDN(:)
+!
+PZ0SEA(:) = MAX(MIN(ZO(:),0.05),10E-6)
 !
 PZ0HSEA(:) = PZ0SEA(:)
 !

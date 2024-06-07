@@ -39,6 +39,7 @@ SUBROUTINE OL_READ_ATM_CONF_ASCII (DTCO, U, HSURF_FILETYPE, HFORCING_FILETYPE,  
 !!      Modified by P. Le Moigne (04/2005): cleaning and checking
 !!      Modified by P. Le Moigne (04/2006): init_io_surf for nature
 !!                  with GTMSK to read dimensions.
+!!      Modified by B. Decharme  (03/2020): add NEND_ATM for forcing interpolation
 !==================================================================
 !
 USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
@@ -47,6 +48,8 @@ USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 USE MODD_TYPE_DATE_SURF
 !
 USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, NCOMM, NPROC, XTIME_COMM_READ, XTIME_NPIO_READ
+!
+USE MODD_IO_SURF_OL, ONLY : NEND_ATM
 !
 USE MODD_ARCH, ONLY : LITTLE_ENDIAN_ARCH
 USE MODD_IO_SURF_ASC, ONLY : NNI_FORC
@@ -126,7 +129,7 @@ IF (NRANK==NPIO) THEN
   !
   READ(21,*) INB_FORC
   READ(21,*) PTSTEP_FORC
-  PDURATION = ( INB_FORC - 1 ) * PTSTEP_FORC
+  PDURATION = ( INB_FORC - NEND_ATM ) * PTSTEP_FORC
   !
   READ(21,*) IYEAR
   READ(21,*) IMONTH

@@ -1,4 +1,4 @@
-!SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
+!SFX_LIC Copyright 2004-2019 CNRS, Meteo-France and Universite Paul Sabatier
 !SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
@@ -33,6 +33,8 @@ CONTAINS
 !!    -------------
 !!      Original    01/2004
 !!        M.Moge    06/2015 broadcast the space step to all MPI processes (necessary for reproductibility)
+!  P. Wautelet 05/2016-04/2018: new data structures and calls for I/O
+!  P. Wautelet 26/04/2019: use modd_precision parameters for datatypes of MPI communications
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
@@ -40,9 +42,11 @@ CONTAINS
 !
 USE MODD_SURF_PAR, ONLY : XUNDEF, NUNDEF
 #ifdef MNH_PARALLEL
-USE MODD_VAR_ll, ONLY : NPROC, IP, MPI_PRECISION, NMNH_COMM_WORLD, YSPLITTING
 USE MODD_MPIF
+use modd_precision, only: MNHINT_MPI, MNHREAL_MPI
+USE MODE_SPLITTINGZ_ll, ONLY : LINI_PARAZ
 USE MODE_TOOLS_ll, ONLY : GET_OR_ll
+USE MODD_VAR_ll, ONLY : NPROC, IP, NMNH_COMM_WORLD, YSPLITTING
 #endif
 !
 IMPLICIT NONE
@@ -110,14 +114,27 @@ PGRID_PAR(6) = PLONOR
 PGRID_PAR(7) = FLOAT(KIMAX)
 PGRID_PAR(8) = FLOAT(KJMAX)
 IF (IL>0) THEN
-  PGRID_PAR(9) = PDX(1)
-  PGRID_PAR(10)= PDY(1)
-ENDIF
+  PGRID_PAR( 9) = 0.
+  DO JJ = 1, SIZE (PDX)
+    IF (PDX (JJ) > 0. .AND. PDX (JJ) /= XUNDEF) THEN
+      PGRID_PAR( 9) = PDX (JJ)
+      EXIT
+    ENDIF
+  ENDDO
+  PGRID_PAR(10) = 0.
+  DO JJ = 1, SIZE (PDY)
+    IF (PDY (JJ) > 0. .AND. PDY (JJ) /= XUNDEF) THEN
+      PGRID_PAR(10) = PDY (JJ)
+      EXIT
+    ENDIF
+  ENDDO 
+ ENDIF
 !
 #ifdef MNH_PARALLEL
 !get the index of the process with IL>0 that own the southmost and the westmost point
 !then broadcast the value of PDX and PDY at these points
-IF ( NPROC > 1 ) THEN
+!Call this only if INI_PARAZ_ll has already been called (to prevent problemns in GET_OR_ll)
+IF ( NPROC > 1 .AND. LINI_PARAZ) THEN
 ! we need to determine wich processes own the southmost and the westmost point
   CALL GET_OR_ll( YSPLITTING, IXOR, IYOR )
   IF ( IL==0 ) THEN ! we don't consider processes with IL==0
@@ -125,26 +142,26 @@ IF ( NPROC > 1 ) THEN
     IYOR = NUNDEF
   ENDIF
   ! get the processes with IL>0 with the westmost points
-  CALL MPI_ALLREDUCE(IXOR, IXORMIN, 1, MPI_INTEGER, MPI_MIN, NMNH_COMM_WORLD, IINFO_ll) 
+  CALL MPI_ALLREDUCE(IXOR, IXORMIN, 1, MNHINT_MPI, MPI_MIN, NMNH_COMM_WORLD, IINFO_ll)
   IF ( IXOR == IXORMIN ) THEN
     IROOT = IP-1
   ELSE
     IROOT = NPROC
   ENDIF
-  CALL MPI_ALLREDUCE(IROOT, IROOTPROC, 1, MPI_INTEGER, MPI_MIN, NMNH_COMM_WORLD, IINFO_ll) 
+  CALL MPI_ALLREDUCE(IROOT, IROOTPROC, 1, MNHINT_MPI, MPI_MIN, NMNH_COMM_WORLD, IINFO_ll)
 ! Then this process broadcasts the space steps in X direction in order to have the same space steps on all processes
-  CALL MPI_BCAST(PGRID_PAR(9), 1, MPI_PRECISION, IROOTPROC, NMNH_COMM_WORLD, IINFO_ll)
+  CALL MPI_BCAST(PGRID_PAR(9), 1, MNHREAL_MPI, IROOTPROC, NMNH_COMM_WORLD, IINFO_ll)
   !
   ! get the processes with IL>0 with the southmost points
-  CALL MPI_ALLREDUCE(IYOR, IYORMIN, 1, MPI_INTEGER, MPI_MIN, NMNH_COMM_WORLD, IINFO_ll) 
+  CALL MPI_ALLREDUCE(IYOR, IYORMIN, 1, MNHINT_MPI, MPI_MIN, NMNH_COMM_WORLD, IINFO_ll)
   IF ( IYOR == IYORMIN ) THEN
     IROOT = IP-1
   ELSE
     IROOT = NPROC
   ENDIF
-  CALL MPI_ALLREDUCE(IROOT, IROOTPROC, 1, MPI_INTEGER, MPI_MIN, NMNH_COMM_WORLD, IINFO_ll) 
+  CALL MPI_ALLREDUCE(IROOT, IROOTPROC, 1, MNHINT_MPI, MPI_MIN, NMNH_COMM_WORLD, IINFO_ll)
 ! Then this process broadcasts the space steps in Y direction in order to have the same space steps on all processes
-  CALL MPI_BCAST(PGRID_PAR(10), 1, MPI_PRECISION, IROOTPROC, NMNH_COMM_WORLD, IINFO_ll)
+  CALL MPI_BCAST(PGRID_PAR(10), 1, MNHREAL_MPI, IROOTPROC, NMNH_COMM_WORLD, IINFO_ll)
 ENDIF
 #endif
 !
@@ -378,7 +395,7 @@ REAL                      :: ZRDSDG,ZCLAT0,ZSLAT0,ZCLATOR,ZSLATOR
 REAL                      :: ZXBM0,ZYBM0,ZRO0,ZGA0 
 REAL                      :: ZXP,ZYP,ZEPSI,ZT1,ZCGAM,ZSGAM,ZRACLAT0
 !
-REAL :: ZATA,ZRO2,ZT2,ZXMI0,ZYMI0, ZXI, ZYI, ZIRDSDG
+REAL :: ZATA,ZRO2,ZT2,ZXMI0,ZYMI0,ZXI,ZYI,ZIRDSDG,ZWORK
 REAL(KIND=JPRB) :: ZHOOK_HANDLE, ZHOOK_HANDLE_OMP
 !
 !--------------------------------------------------------------------------------
@@ -468,7 +485,9 @@ IF (LHOOK) CALL DR_HOOK('MODE_GRIDTYPE_CONF_PROJ:LATLON_CONF_PROJ_21',0,ZHOOK_HA
     !    
     ZT2  = (ZRPK**2*ZRO2)**(1./ZRPK)
     !
-    PLAT(JI) = (XPI/2.-ACOS((ZT1-ZT2)/(ZT1+ZT2)))*ZIRDSDG
+    ZWORK = ACOS((ZT1-ZT2)/(ZT1+ZT2))
+    !
+    PLAT(JI) = ((XPI/2.0)-ZWORK)*ZIRDSDG
     !
     IF (PRPK<0.) THEN     ! projection from north pole
       PLAT(JI)=-PLAT(JI)
@@ -862,6 +881,7 @@ REAL                              :: ZCLAT0   ! cos(lat0)
 REAL                              :: ZSLAT0   ! sin(lat0)
 REAL                              :: ZRDSDG   ! pi/180
 LOGICAL                           :: GNORTHPROJ! T: projection from north pole
+INTEGER                           :: I
 REAL(KIND=JPRB) :: ZHOOK_HANDLE, ZHOOK_HANDLE_OMP
 INTEGER :: J, ISIZE_OMP
 !
@@ -910,8 +930,10 @@ IF (LHOOK) CALL DR_HOOK('MODE_GRIDTYPE_CONF_PROJ:MAP_FACTOR_CONF_PROJ_2b',0,ZHOO
     IF (ABS(COS(ZRDSDG*ZLAT(J)))>1.E-10) THEN
       PMAP(J) = ((ZCLAT0/COS(ZRDSDG*ZLAT(J)))**(1.-ZRPK))      &
               * ((1.+ZSLAT0)/(1.+SIN(ZRDSDG*ZLAT(J))))**ZRPK  
-    ELSE
+    ELSEIF(SIGN(ZLAT(J),1.) == 1.) THEN
       PMAP(J) = (1.+ZSLAT0)/(1.+SIN(ZRDSDG*ZLAT(J)))
+    ELSE
+      PMAP(J) = (1.+ZSLAT0)/1.E-10
     ENDIF
   ENDDO
 !$OMP ENDDO

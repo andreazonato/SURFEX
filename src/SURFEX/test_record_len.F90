@@ -15,12 +15,13 @@ SUBROUTINE TEST_RECORD_LEN (HPROGRAM,HREC,HSELECT,ONOWRITE)
 USE MODI_GET_LUOUT
 !
 USE MODD_SURFEX_MPI, ONLY : NRANK,NPIO
+USE MODD_SURF_PAR, ONLY: LEN_HREC
 USE MODD_XIOS, ONLY : LXIOS, LXIOS_DEF_CLOSED
 #ifdef WXIOS
 USE XIOS, ONLY      : XIOS_IS_VALID_FIELD, XIOS_FIELD_IS_ACTIVE
 #endif
 !
-USE MODD_WRITE_SURF_ATM, ONLY : LFIRST_WRITE, LNOWRITE, NCPT_WRITE
+USE MODD_WRITE_SURF_ATM, ONLY : LFIRST_WRITE, LNOWRITE, NCPT_WRITE, NSIZE_LNOWRITE
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -30,11 +31,11 @@ USE MODI_ABOR1_SFX
 IMPLICIT NONE
 !
  CHARACTER(LEN=6),   INTENT(IN)  :: HPROGRAM ! calling program
- CHARACTER(LEN=12),  INTENT(IN)  :: HREC     ! name of the article to be written
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN)  :: HREC     ! name of the article to be written
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
 LOGICAL,            INTENT(OUT) :: ONOWRITE ! flag for article to be written
 !
- CHARACTER(LEN=12) :: YREC
+ CHARACTER(LEN=LEN_HREC) :: YREC
 INTEGER :: IFIELD,JFIELD
 INTEGER :: ILUOUT  ! listing logical unit
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
@@ -48,6 +49,13 @@ IF (TRIM(HREC)=="time".OR.TRIM(HREC)=="longitude".OR.TRIM(HREC)=="latitude") THE
 ENDIF
 !
 NCPT_WRITE = NCPT_WRITE + 1
+IF (NCPT_WRITE > NSIZE_LNOWRITE) THEN
+  WRITE(ILUOUT,*) '--------------------------------------'
+  WRITE(ILUOUT,*) 'Error when writing a field'
+  WRITE(ILUOUT,*) 'No more room available in LNOWRITE table'
+  WRITE(ILUOUT,*) 'Please increase its size in modd_write_surf_atm'
+  CALL ABOR1_SFX('TEST_RECORD_LEN: LNOWRITE table is full')
+ENDIF
 !
 IF (LFIRST_WRITE) THEN
   !
@@ -56,7 +64,7 @@ IF (LFIRST_WRITE) THEN
     !
     IF (LXIOS_DEF_CLOSED) THEN 
       IF (XIOS_IS_VALID_FIELD(HREC)) THEN
-        ONOWRITE = .NOT.XIOS_FIELD_IS_ACTIVE(HREC)
+        ONOWRITE = .NOT.XIOS_FIELD_IS_ACTIVE(HREC,.FALSE.)
       ELSE
         ONOWRITE = .TRUE.
       ENDIF
@@ -73,12 +81,12 @@ IF (LFIRST_WRITE) THEN
   ENDIF
 #endif
   !
-  IF (LEN_TRIM(HREC)>12) THEN
+  IF (LEN_TRIM(HREC)>LEN_HREC) THEN
     CALL GET_LUOUT(HPROGRAM,ILUOUT)
     WRITE(ILUOUT,*) '----------------------------------------------'
     WRITE(ILUOUT,*) 'Error occured when writing a field            '
     WRITE(ILUOUT,*) 'The name of the field is too long             '
-    WRITE(ILUOUT,*) 'The name must not be longer than 12 characters'
+    WRITE(ILUOUT,*) 'The name must not be longer than',LEN_HREC,' characters'
     WRITE(ILUOUT,*) 'Please shorten the name of your field         '
     WRITE(ILUOUT,FMT='(A32,A12,A1)') ' The field name currently is : "',HREC,'"'
     WRITE(ILUOUT,*) '----------------------------------------------'

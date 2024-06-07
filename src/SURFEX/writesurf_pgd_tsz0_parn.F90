@@ -41,6 +41,7 @@
 !
 !
 USE MODD_DATA_TSZ0_n, ONLY : DATA_TSZ0_t
+USE MODD_SURF_PAR, ONLY: LEN_HREC
 !
 USE MODI_WRITE_SURF
 !
@@ -62,7 +63,7 @@ TYPE(DATA_TSZ0_t), INTENT(INOUT) :: DTZ
 !              -------------------------------
 !
 INTEGER           :: IRESP          ! IRESP  : return-code if a problem appears
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
  CHARACTER(LEN=100):: YCOMMENT       ! Comment string
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !

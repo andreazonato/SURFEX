@@ -33,7 +33,9 @@ MODULE MODE_READ_SURF_OL
 !!    MODIFICATIONS
 !!    -------------
 !!
-!!      original                                                     01/08/03
+!!      original         01/08/03
+!!      A.Druel           08/2019: Permit to change the size of caracters (write / read) with constant
+!!
 !----------------------------------------------------------------------------
 !
 INTERFACE READ_SURF0_OL
@@ -179,11 +181,12 @@ INTEGER :: IVAR_ID,IFILE_ID,JRET,JDIM,INDIMS, ITYPE
 INTEGER,DIMENSION(2) :: IDIMIDS,IDIMLEN
 INTEGER,DIMENSION(2) :: IRET
 !
-INTEGER,DIMENSION(:),ALLOCATABLE :: ISTART,ICOUNT,ISTRIDE
-REAL, DIMENSION(:), ALLOCATABLE :: ZWORK
-REAL*4, DIMENSION(:), ALLOCATABLE :: ZTAB_1D4
-DOUBLE PRECISION   :: XTIME0
-REAL(KIND=JPRB) :: ZHOOK_HANDLE
+INTEGER,DIMENSION(:),  ALLOCATABLE :: ISTART,ICOUNT,ISTRIDE
+REAL, DIMENSION(:),    ALLOCATABLE :: ZWORK
+REAL*4, DIMENSION(:),  ALLOCATABLE :: ZTAB_1D4
+INTEGER, DIMENSION(:), ALLOCATABLE :: ITAB_1D
+DOUBLE PRECISION                   :: XTIME0
+REAL(KIND=JPRB)                    :: ZHOOK_HANDLE
 !
 IF (LHOOK) CALL DR_HOOK('MODE_READ_SURF_OL:READ_SURFX1_OL',0,ZHOOK_HANDLE)
 !
@@ -246,6 +249,11 @@ IF (NRANK==NPIO) THEN
         IRET(1)=NF90_GET_VAR(IFILE_ID,IVAR_ID,ZTAB_1D4,ISTART,ICOUNT,ISTRIDE)
         ZWORK(:) = ZTAB_1D4(:)
         DEALLOCATE(ZTAB_1D4)
+      ELSEIF (ITYPE==NF90_INT) THEN
+        ALLOCATE(ITAB_1D(IDIMLEN(1)*IDIMLEN(2)))
+        IRET(1)=NF90_GET_VAR(IFILE_ID,IVAR_ID,ITAB_1D,ISTART,ICOUNT,ISTRIDE)
+        ZWORK(:) = ITAB_1D(:)
+        DEALLOCATE(ITAB_1D)
       ENDIF
 
       DEALLOCATE(ISTRIDE)
@@ -764,7 +772,8 @@ END SUBROUTINE READ_SURFN1_OL
 USE MODI_OL_FIND_FILE_READ
 USE MODI_ERROR_READ_SURF_OL
 !
-USE MODD_SURF_PAR,   ONLY: XUNDEF
+USE MODD_SURF_PAR,           ONLY: XUNDEF
+USE MODD_DATA_COVER_PAR,     ONLY : NCAR_FILES
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -776,10 +785,10 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=*),   INTENT(IN)  :: HREC     ! name of the article to be read
- CHARACTER(LEN=40),   INTENT(OUT) :: HFIELD   ! the integer scalar to be read
-INTEGER,             INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem appears
- CHARACTER(LEN=100),  INTENT(OUT) :: HCOMMENT ! comment
+ CHARACTER(LEN=*),          INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=NCAR_FILES), INTENT(OUT) :: HFIELD   ! the integer scalar to be read
+INTEGER,                    INTENT(OUT) :: KRESP    ! KRESP  : return-code if a problem appears
+ CHARACTER(LEN=100),        INTENT(OUT) :: HCOMMENT ! comment
 !
 !*      0.2   Declarations of local variables
 !

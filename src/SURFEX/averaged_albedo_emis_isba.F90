@@ -3,9 +3,10 @@
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 !     #########
-      SUBROUTINE AVERAGED_ALBEDO_EMIS_ISBA (IO, S, NK, NP, NPE, &
-                                 PZENITH, PTG1, PSW_BANDS, PDIR_ALB, PSCA_ALB, &
-                                 PEMIS, PTSRAD, PTSURF, PDIR_SW, PSCA_SW        )
+      SUBROUTINE AVERAGED_ALBEDO_EMIS_ISBA (IO, S, NK, NP, NPE,                                  &
+                                 PZENITH, PTG1, PSW_BANDS, NPAR_VEG_IRR_USE, PDIR_ALB, PSCA_ALB, &
+                                 PEMIS, PTSRAD, PTSURF, PDIR_SW, PSCA_SW,                        &
+                                 PRN_SHADE, PRN_SUNLIT        )
 !     ###################################################
 !
 !!**** ** computes radiative fields used in ISBA
@@ -39,6 +40,7 @@
 !                            <= to ZSNG
 !!     B. Decharme  2013    new coupling variable and optimization    
 !!     P. Samuelsson 10/2014 MEB
+!!     A. Druel      02/2019 - transmit NPAR_VEG_IRR_USE for irrigation
 !----------------------------------------------------------------------------
 !
 !*    0.     DECLARATION
@@ -72,14 +74,16 @@ IMPLICIT NONE
 !
 !
 TYPE(ISBA_OPTIONS_t), INTENT(INOUT) :: IO
-TYPE(ISBA_S_t), INTENT(INOUT) :: S
-TYPE(ISBA_NK_t), INTENT(INOUT) :: NK
-TYPE(ISBA_NP_t), INTENT(INOUT) :: NP
-TYPE(ISBA_NPE_t), INTENT(INOUT) :: NPE
+TYPE(ISBA_S_t),       INTENT(INOUT) :: S
+TYPE(ISBA_NK_t),      INTENT(INOUT) :: NK
+TYPE(ISBA_NP_t),      INTENT(INOUT) :: NP
+TYPE(ISBA_NPE_t),     INTENT(INOUT) :: NPE
 !
 REAL, DIMENSION(:,:),   INTENT(IN)   :: PTG1        ! soil surface temperature
 REAL, DIMENSION(:),     INTENT(IN)   :: PZENITH     
 REAL, DIMENSION(:),     INTENT(IN)   :: PSW_BANDS   ! middle wavelength of each band
+!
+INTEGER,DIMENSION(:),   INTENT(IN)   :: NPAR_VEG_IRR_USE ! vegtype with irrigation
 !
 REAL, DIMENSION(:,:),   INTENT(OUT)  :: PDIR_ALB    ! averaged direct albedo  (per wavelength)
 REAL, DIMENSION(:,:),   INTENT(OUT)  :: PSCA_ALB    ! averaged diffuse albedo (per wavelength)
@@ -90,13 +94,15 @@ REAL, DIMENSION(:),     INTENT(OUT)  :: PTSURF      ! surface effective temperat
 REAL, DIMENSION(:,:),   INTENT(IN), OPTIONAL   :: PDIR_SW ! Downwelling direct SW radiation
 REAL, DIMENSION(:,:),   INTENT(IN), OPTIONAL   :: PSCA_SW ! Downwelling diffuse SW radiation
 !
+REAL, DIMENSION(:),   INTENT(INOUT), OPTIONAL :: PRN_SHADE
+REAL, DIMENSION(:),   INTENT(INOUT), OPTIONAL :: PRN_SUNLIT
 !
 !*    0.2    Declaration of local variables
 !            ------------------------------
 !
 !
-TYPE(ISBA_K_t), POINTER :: KK
-TYPE(ISBA_P_t), POINTER :: PK
+TYPE(ISBA_K_t),  POINTER :: KK
+TYPE(ISBA_P_t),  POINTER :: PK
 TYPE(ISBA_PE_t), POINTER :: PEK
 !
 REAL, DIMENSION(SIZE(PZENITH),SIZE(PSW_BANDS),IO%NPATCH) :: ZDIR_ALB_PATCH 
@@ -177,15 +183,16 @@ DO JP = 1,IO%NPATCH
     !
     ! For the case when MEB patch albedo is requested downweeling SW is needed
     !
-    CALL UPDATE_RAD_ISBA_n(IO, S, NK%AL(JP), NP%AL(JP), NPE%AL(JP), JP, PZENITH, PSW_BANDS,   &
-                           ZDIR_ALB_PATCH(:,:,JP), ZSCA_ALB_PATCH(:,:,JP), ZEMIS_PATCH(:,JP), &
-                           PDIR_SW, PSCA_SW    )
+    CALL UPDATE_RAD_ISBA_n(IO, S, NK%AL(JP), NP%AL(JP), NPE%AL(JP), JP, PZENITH, PSW_BANDS, NPAR_VEG_IRR_USE, &
+                           ZDIR_ALB_PATCH(:,:,JP), ZSCA_ALB_PATCH(:,:,JP), ZEMIS_PATCH(:,JP),                 &
+                           PRN_SHADE, PRN_SUNLIT, PDIR_SW, PSCA_SW    )
   ELSE
     !
     ! For cases when MEB patch albedo is not requested no downweeling SW is needed
     !
-    CALL UPDATE_RAD_ISBA_n(IO, S, NK%AL(JP), NP%AL(JP), NPE%AL(JP), JP, PZENITH, PSW_BANDS, &
-                           ZDIR_ALB_PATCH(:,:,JP), ZSCA_ALB_PATCH(:,:,JP), ZEMIS_PATCH(:,JP))
+    CALL UPDATE_RAD_ISBA_n(IO, S, NK%AL(JP), NP%AL(JP), NPE%AL(JP), JP, PZENITH, PSW_BANDS, NPAR_VEG_IRR_USE, &
+                           ZDIR_ALB_PATCH(:,:,JP), ZSCA_ALB_PATCH(:,:,JP), ZEMIS_PATCH(:,JP),                 &
+                           PRN_SHADE, PRN_SUNLIT)
     !
   ENDIF
   !

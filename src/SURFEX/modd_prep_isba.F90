@@ -28,6 +28,7 @@
 !!    -------------
 !!      Original       01/2004
 !!      P Samuelsson   02/2012  MEB
+!!      B Decahrme     08/2020  Add key To reset soil carbon initialization from a previous prep file
 !
 !*       0.   DECLARATIONS
 !             ------------
@@ -84,15 +85,18 @@ REAL, DIMENSION(NGRID_LEVEL) :: XGRID_SOIL = &
 !
 LOGICAL :: LSNOW_IDEAL 
 !
-REAL, DIMENSION(:), POINTER :: XWSNOW         ! Snow reservoir
-REAL, DIMENSION(:), POINTER :: XRSNOW         ! snow density
-REAL, DIMENSION(:), POINTER :: XTSNOW         ! snow temperature
-REAL, DIMENSION(:), POINTER :: XLWCSNOW       ! snow liquid water content
-REAL, DIMENSION(:), POINTER :: XSG1SNOW
-REAL, DIMENSION(:), POINTER :: XSG2SNOW
-REAL, DIMENSION(:), POINTER :: XHISTSNOW
-REAL, DIMENSION(:), POINTER :: XAGESNOW
-REAL                  :: XASNOW         ! snow albedo
+REAL, DIMENSION(:),   POINTER :: XWSNOW       ! Snow reservoir
+REAL, DIMENSION(:),   POINTER :: XRSNOW       ! snow density
+REAL, DIMENSION(:),   POINTER :: XTSNOW       ! snow temperature
+REAL, DIMENSION(:),   POINTER :: XLWCSNOW     ! snow liquid water content
+REAL, DIMENSION(:),   POINTER :: XSG1SNOW
+REAL, DIMENSION(:),   POINTER :: XSG2SNOW
+REAL, DIMENSION(:),   POINTER :: XHISTSNOW
+REAL, DIMENSION(:),   POINTER :: XAGESNOW
+!
+REAL, DIMENSION(:,:), POINTER :: XIMPURSNOW   !N6K
+!
+REAL                          :: XASNOW       ! snow albedo
 !
 !--------------------------------------------------------------------------
 !
@@ -100,7 +104,14 @@ LOGICAL           :: LEXTRAP_TG     ! extrapolate TG points where LSM < 0.5 (buf
 LOGICAL           :: LEXTRAP_WG     ! extrapolate WG points where LSM < 0.5 (buffer only)  
 LOGICAL           :: LEXTRAP_WGI    ! extrapolate WGI points where LSM < 0.5 (buffer only) 
 LOGICAL           :: LEXTRAP_SN     ! extrapolate SNOW (SWE/depth) points where LSM < 0.5 (buffer only) 
-
+!
+!--------------------------------------------------------------------------
+!
+LOGICAL           :: LRESET_CSOIL   ! To reset soil carbon initialization from a previous prep file
+!                                   ! Allowing physic initialization only
+!
+!--------------------------------------------------------------------------
+!
 END MODULE MODD_PREP_ISBA
 
 

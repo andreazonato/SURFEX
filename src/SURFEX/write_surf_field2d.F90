@@ -48,7 +48,7 @@
 !*       0.    DECLARATIONS
 !              ------------
 !
-USE MODD_SURF_PAR, ONLY : NUNDEF
+USE MODD_SURF_PAR, ONLY : NUNDEF, LEN_HREC
 !
 USE MODI_WRITE_SURF
 #ifdef SFX_MNH
@@ -67,7 +67,7 @@ IMPLICIT NONE
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
 CHARACTER(LEN=6),                 INTENT(IN) :: HPROGRAM     ! calling program
 REAL, DIMENSION(:,:),             INTENT(IN) :: PFIELD2D     ! 2D field to be written
-CHARACTER(LEN=12),                INTENT(IN) :: HFIELDNAME   ! name of the field PFIELD2D. Example : 'X_Y_TG'
+CHARACTER(LEN=LEN_HREC),                INTENT(IN) :: HFIELDNAME   ! name of the field PFIELD2D. Example : 'X_Y_TG'
 CHARACTER(LEN=100),               INTENT(IN) :: HCOMMENT     ! Comment string
 CHARACTER(LEN=100),               INTENT(IN) :: HCOMMENTUNIT ! unit of the datas in PFIELD2D
  CHARACTER(LEN=1),OPTIONAL,       INTENT(IN) :: HDIR ! type of field :

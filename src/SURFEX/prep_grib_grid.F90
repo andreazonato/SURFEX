@@ -35,6 +35,9 @@
 !!      Original   06/2003
 !!      S. Faroux 01/2011 : to use library GRIB_API instead of GRIBEX (from
 !!                          read_all_data_grib_case)
+!!      J. Escobar 1/06/2018 : remove IALLGRIB loop , useless & very memory consuming
+!!      Gaelle Delautier (via Q.Rodier) 01/2019 : add GRIB 2 and adaptation to EPYGRAM-edited GRIB
+!!      
 !-------------------------------------------------------------------------------
 !
 !*      0. DECLARATIONS
@@ -55,7 +58,7 @@ USE MODD_GRID_ROTLATLON
 USE MODD_GRID_GAUSS, ONLY : XILA1, XILO1, XILA2, XILO2, NINLA, NINLO, NILEN, LROTPOLE, XCOEF, XLAP, XLOP, &
                             XLAT, XLON
 USE MODD_GRID_AROME, ONLY : XX, XY, NX, NY, XLAT0, XLON0, XLATOR, XLONOR, XRPK, XBETA, XZX, XZY, NIX
-USE MODD_GRID_GRIB,  ONLY : NNI, CGRIB_FILE
+USE MODD_GRID_GRIB,  ONLY : NNI, CGRIB_FILE,NGRIB_VERSION
 USE MODD_SURF_PAR,   ONLY : XUNDEF, NUNDEF
 USE MODD_CSTS,       ONLY : XPI
 !
@@ -63,6 +66,7 @@ USE MODE_GRIDTYPE_CONF_PROJ
 USE MODI_HORIBL_SURF_INIT
 USE MODI_HORIBL_SURF_COEF
 USE MODI_ARPEGE_STRETCH_A
+USE MODI_ADD_FORECAST_TO_DATE_SURF
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -111,7 +115,7 @@ REAL :: ZTIME
 INTEGER                            :: JLOOP1        ! Dummy counter
 !JUAN
 !JUAN
-INTEGER :: INFOMPI, J
+INTEGER :: INFOMPI
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
 !---------------------------------------------------------------------------------------
@@ -149,6 +153,11 @@ IF (IRET /= 0) THEN
   CALL ABOR1_SFX('PREP_GRIB_GRID: Error in reading center')
 END IF
 !
+ CALL GRIB_GET(IGRIB,'editionNumber',NGRIB_VERSION,IRET)
+IF (IRET /= 0) THEN
+  CALL ABOR1_SFX('PREP_GRIB_GRID: Error in reading editionNumber')
+END IF
+!
  CALL GRIB_GET(IGRIB,'typeOfGrid',HGRID,IRET)
 IF (IRET /= 0) THEN
   CALL ABOR1_SFX('PREP_GRIB_GRID: Error in reading type of grid')
@@ -156,6 +165,10 @@ END IF
 !
 SELECT CASE (ICENTER)
 
+  CASE (7)
+    WRITE (KLUOUT,'(A)') ' | Grib file from National Centres for Environmental Prediction'
+    HINMODEL = 'NCEP  '
+    HGRIDTYPE= 'LATLON    '
   CASE (96)
     SELECT CASE (HGRID)
 
@@ -460,15 +473,34 @@ SELECT CASE (HGRIDTYPE)
      !
        HGRIDTYPE = 'GAUSS     '
        IF (NRANK==NPIO) THEN
+! PROBLEME AVEC LES GRIB 2 d'EPYGRAM
+! dans longitudeOfLastGridPointInDegrees la longitude du dernier point du
+! tableau (donc au pole sud)  
+! dans les GRIB1 on a la valeur max du tableau des longitudes (donc à
+! l'equateur) REMARQUE : c'est ce qu'on a pour le CEP
+! pour éviter de changer le GRIB on calcule différemment XILO2 en le recalculant 
+! le max de la longitude au niveau de l'équateur garce au champ 'pl'
+!
        CALL GRIB_GET(IGRIB,'latitudeOfFirstGridPointInDegrees',XILA1)
        CALL GRIB_GET(IGRIB,'longitudeOfFirstGridPointInDegrees',XILO1)
        CALL GRIB_GET(IGRIB,'latitudeOfLastGridPointInDegrees',XILA2)
        CALL GRIB_GET(IGRIB,'longitudeOfLastGridPointInDegrees',XILO2)
-     
        CALL GRIB_GET(IGRIB,'stretchingFactor',XCOEF)
        CALL GRIB_GET(IGRIB,'latitudeOfStretchingPoleInDegrees',XLAP)
        CALL GRIB_GET(IGRIB,'longitudeOfStretchingPoleInDegrees',XLOP)
-      ENDIF
+       IF(NGRIB_VERSIOn == 2) THEN
+         IF (NRANK==NPIO) THEN
+           ALLOCATE (ININLO_GRIB(NINLA))
+           CALL GRIB_IS_MISSING(IGRIB,'pl',IMISSING,IRET)
+           IF (IRET == 0 .OR. IMISSING/=1)  THEN !  quasi-regular
+             CALL GRIB_GET(IGRIB,'pl',ININLO_GRIB)
+             XILO2=360.-360./(MAXVAL(ININLO_GRIB))
+           ENDIF
+           DEALLOCATE(ININLO_GRIB)
+           ENDIF
+         ENDIF
+       ENDIF
+      
       LROTPOLE = .TRUE.
        IF (NPROC>1) THEN
 #ifdef SFX_MPI                
@@ -541,6 +573,7 @@ IF ( IP1>0 ) THEN
       ZTIME   = ZTIME + IP1*60.
   END SELECT
 ENDIF
+CALL ADD_FORECAST_TO_DATE_SURF(IYEAR,IMONTH,IDAY,ZTIME)
 ENDIF
 !
 IF (NPROC>1) THEN

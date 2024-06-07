@@ -3,8 +3,9 @@
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 !     #########
-      SUBROUTINE READ_PGD_TEB_GREENROOF_n (OCH_BIO_FLUX, DTCO, DTV, GB, U, &
-                                           IO, S, K, KDIM, HPROGRAM,KVERSION)
+      SUBROUTINE READ_PGD_TEB_GREENROOF_n (OCH_BIO_FLUX, HPARAMBVOC, &
+                                           DTCO, DTV, GB, U, IO, S, K, &
+                                           KDIM, HPROGRAM,KVERSION)
 !     #########################################
 !
 !!****  *READ_PGD_TEB_GREENROOF_n* - routine to initialise ISBA physiographic variables 
@@ -32,7 +33,10 @@
 !!
 !!    MODIFICATIONS
 !!    -------------
-!!      Original    07/2011 
+!!      Original    07/2011
+!!      P. Tulet    06/2016 : add XEF for MEGAN coupling
+!!      M. Leriche     2017 : BVOC emission do not work with greenroof
+!!                              -> to be debug
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
@@ -46,6 +50,7 @@ USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
 USE MODD_DATA_ISBA_n, ONLY : DATA_ISBA_t
 USE MODD_GR_BIOG_n, ONLY : GR_BIOG_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODD_ISBA_OPTIONS_n, ONLY : ISBA_OPTIONS_t
 USE MODD_ISBA_n, ONLY : ISBA_K_t, ISBA_S_t
@@ -69,6 +74,7 @@ IMPLICIT NONE
 !
 !
 LOGICAL, INTENT(IN) :: OCH_BIO_FLUX
+CHARACTER(LEN=*), INTENT(IN) :: HPARAMBVOC
 TYPE(DATA_COVER_t), INTENT(INOUT) :: DTCO
 TYPE(DATA_ISBA_t), INTENT(INOUT) :: DTV
 TYPE(GR_BIOG_t), INTENT(INOUT) :: GB
@@ -86,7 +92,7 @@ INTEGER,           INTENT(IN)  :: KVERSION ! version of SURFEX of the file being
 !
 INTEGER           :: IRESP          ! Error code after redding
 !
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 !
 !
 INTEGER           :: JLAYER         ! loop counter on layers ! not used
@@ -121,7 +127,7 @@ ENDIF
 !-------------------------------------------------------------------------------
 !* biogenic chemical emissions
 !
-IF (OCH_BIO_FLUX) THEN
+IF (OCH_BIO_FLUX.AND.HPARAMBVOC=="SOLMON") THEN
   ALLOCATE(GB%XISOPOT(KDIM))
   YRECFM='E_ISOPOT'
   CALL READ_SURF(HPROGRAM,YRECFM,GB%XISOPOT,IRESP)

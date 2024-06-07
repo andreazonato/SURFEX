@@ -3,9 +3,9 @@
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 !     #########
-SUBROUTINE UPDATE_RAD_ISBA_n (IO, S, KK, PK, PEK, KPATCH, PZENITH, PSW_BANDS, &
-                              PDIR_ALB_WITH_SNOW,PSCA_ALB_WITH_SNOW, PEMIST,  &
-                              PDIR_SW, PSCA_SW     )
+SUBROUTINE UPDATE_RAD_ISBA_n (IO, S, KK, PK, PEK, KPATCH, PZENITH, PSW_BANDS, NPAR_VEG_IRR_USE, &
+                              PDIR_ALB_WITH_SNOW,PSCA_ALB_WITH_SNOW, PEMIST,                    &
+                              PRN_SHADE, PRN_SUNLIT, PDIR_SW, PSCA_SW     )
 !     ####################################################################
 !
 !!****  *UPDATE_RAD_ISBA_n * - Calculate snow/flood fraction, dir/dif albedo
@@ -29,26 +29,29 @@ SUBROUTINE UPDATE_RAD_ISBA_n (IO, S, KK, PK, PEK, KPATCH, PZENITH, PSW_BANDS, &
 !!
 !!    MODIFICATIONS
 !!    -------------
-!!      Original    09/2009
+!!      Original      09/2009
 !!      P. Samuelsson 02/2012 MEB
 !!      A. Boone      03/2015 MEB-use TR_ML scheme for SW radiation
+!!      A. Druel      02/2019 transmit NPAR_VEG_IRR_USE for irrigation
+!!      B. Decharme   06/2022 Intinialization : Albedo not defined, can not be used with arpege
+!!                            !!!This debug must be improved to couple with arpege!!!
 !!------------------------------------------------------------------
 !
 !
 USE MODD_ISBA_OPTIONS_n, ONLY : ISBA_OPTIONS_t
-USE MODD_ISBA_n, ONLY: ISBA_S_t, ISBA_K_t, ISBA_P_t, ISBA_PE_t
+USE MODD_ISBA_n,         ONLY: ISBA_S_t, ISBA_K_t, ISBA_P_t, ISBA_PE_t
 !
 USE MODD_TYPE_SNOW
 !
-USE MODD_CSTS,      ONLY : XTT
-USE MODD_SURF_PAR,  ONLY : XUNDEF
-USE MODD_SNOW_PAR,  ONLY : XRHOSMIN_ES,XRHOSMAX_ES,XSNOWDMIN,XEMISSN
-USE MODD_WATER_PAR, ONLY : XALBSCA_WAT, XEMISWAT, XALBWATICE, XEMISWATICE 
-USE MODD_MEB_PAR,   ONLY : XSW_WGHT_VIS, XSW_WGHT_NIR
+USE MODD_CSTS,           ONLY : XTT
+USE MODD_SURF_PAR,       ONLY : XUNDEF
+USE MODD_SNOW_PAR,       ONLY : XRHOSMIN_ES,XRHOSMAX_ES,XSNOWDMIN,XEMISSN
+USE MODD_WATER_PAR,      ONLY : XALBSCA_WAT, XEMISWAT, XALBWATICE, XEMISWATICE 
+USE MODD_MEB_PAR,        ONLY : XSW_WGHT_VIS, XSW_WGHT_NIR
 !
 USE MODE_SURF_FLOOD_FRAC
 USE MODE_SURF_SNOW_FRAC      
-USE MODE_MEB,       ONLY : MEB_SHIELD_FACTOR, MEBPALPHAN
+USE MODE_MEB,            ONLY : MEB_SHIELD_FACTOR, MEBPALPHAN
 !
 USE MODI_ALBEDO_TA96
 USE MODI_ALBEDO_FROM_NIR_VIS
@@ -68,19 +71,24 @@ IMPLICIT NONE
 !
 !
 TYPE(ISBA_OPTIONS_t), INTENT(INOUT) :: IO
-TYPE(ISBA_S_t), INTENT(INOUT) :: S
-TYPE(ISBA_K_t), INTENT(INOUT) :: KK
-TYPE(ISBA_P_t), INTENT(INOUT) :: PK
-TYPE(ISBA_PE_t), INTENT(INOUT) :: PEK
+TYPE(ISBA_S_t),       INTENT(INOUT) :: S
+TYPE(ISBA_K_t),       INTENT(INOUT) :: KK
+TYPE(ISBA_P_t),       INTENT(INOUT) :: PK
+TYPE(ISBA_PE_t),      INTENT(INOUT) :: PEK
 !
-INTEGER, INTENT(IN) :: KPATCH
+INTEGER,                INTENT(IN)  :: KPATCH
 !
-REAL, DIMENSION(:),     INTENT(IN)   :: PZENITH   ! Zenithal angle at t+1
-REAL, DIMENSION(:),     INTENT(IN)   :: PSW_BANDS ! mean wavelength of each shortwave band (m)
+REAL, DIMENSION(:),     INTENT(IN)  :: PZENITH   ! Zenithal angle at t+1
+REAL, DIMENSION(:),     INTENT(IN)  :: PSW_BANDS ! mean wavelength of each shortwave band (m)
+!
+INTEGER,DIMENSION(:), INTENT(IN)    :: NPAR_VEG_IRR_USE ! vegtype with irrigation
 !
 REAL, DIMENSION(:,:), INTENT(OUT)  :: PDIR_ALB_WITH_SNOW ! Total direct albedo at t+1
 REAL, DIMENSION(:,:), INTENT(OUT)  :: PSCA_ALB_WITH_SNOW ! Total diffuse albedo at t+1
 REAL, DIMENSION(:),   INTENT(OUT)  :: PEMIST             ! Total emissivity at t+1
+!
+REAL, DIMENSION(:),   INTENT(INOUT), OPTIONAL :: PRN_SHADE
+REAL, DIMENSION(:),   INTENT(INOUT), OPTIONAL :: PRN_SUNLIT
 !
 REAL, DIMENSION(:,:),   INTENT(IN), OPTIONAL   :: PDIR_SW   ! direct  solar radiation (on horizontal surf.)
 REAL, DIMENSION(:,:),   INTENT(IN), OPTIONAL   :: PSCA_SW   ! diffuse solar radiation (on horizontal surf.)
@@ -209,6 +217,7 @@ IF(IO%LMEB_PATCH(KPATCH))THEN
     !   the cummulative variables in this routine:
     !
     DO JSWB=1,ISWB
+      !
       ZGLOBAL_SW(:) = ZDIR_SW(:,JSWB) + ZSCA_SW(:,JSWB)
       !
       WHERE(PEK%TSNOW%ALB(:)/=XUNDEF .AND. PEK%TSNOW%ALBVIS(:)/=XUNDEF .AND. PEK%TSNOW%ALBNIR(:)/=XUNDEF)
@@ -221,12 +230,13 @@ IF(IO%LMEB_PATCH(KPATCH))THEN
         ZALBNIR_TSOIL(:) = PEK%XALBNIR_SOIL(:)
       END WHERE
       !
-      CALL RADIATIVE_TRANSFERT(IO%LAGRI_TO_GRASS, KK%XVEGTYPE,                   &
+      CALL RADIATIVE_TRANSFERT(KK%XVEGTYPE,                                      &
               PEK%XALBVIS_VEG, ZALBVIS_TSOIL, PEK%XALBNIR_VEG, ZALBNIR_TSOIL,    &
               ZGLOBAL_SW, ZLAIN, ZZENITH, S%XABC,                                &
               PEK%XFAPARC, PEK%XFAPIRC, PEK%XMUS, PEK%XLAI_EFFC, GSHADE, ZIACAN, &              
               ZIACAN_SUNLIT, ZIACAN_SHADE, ZFRAC_SUN,                            &
-              ZFAPAR, ZFAPIR, ZFAPAR_BS, ZFAPIR_BS                               )    
+              ZFAPAR, ZFAPIR, ZFAPAR_BS, ZFAPIR_BS, NPAR_VEG_IRR_USE,            &
+              PRN_SHADE, PRN_SUNLIT        )    
 
       ! Total effective surface (canopy, ground/flooded zone, snow) all-wavelength
       ! albedo: diagnosed from shortwave energy budget closure.
@@ -240,6 +250,21 @@ IF(IO%LMEB_PATCH(KPATCH))THEN
       KK%XSCA_ALB_WITH_SNOW(:,JSWB)=ZALBT(:) 
       !
     END DO
+    !
+  ELSE
+    !
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Wrong solution for initialisation. 
+    ! Must be improved by adding directly radiative properties at t+1 in the restart
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !
+    ZALBNIR_WITH_SNOW(:) = PEK%XALBNIR(:) * (1.-PEK%XPSN(:)) + PEK%TSNOW%ALB (:) * PEK%XPSN(:)   
+    ZALBVIS_WITH_SNOW(:) = PEK%XALBVIS(:) * (1.-PEK%XPSN(:)) + PEK%TSNOW%ALB (:) * PEK%XPSN(:)  
+    ZALBUV_WITH_SNOW (:) = PEK%XALBUV (:) * (1.-PEK%XPSN(:)) + PEK%TSNOW%ALB (:) * PEK%XPSN(:)  
+    !
+    CALL ALBEDO_FROM_NIR_VIS(PSW_BANDS,                                              &
+                             ZALBNIR_WITH_SNOW,  ZALBVIS_WITH_SNOW, ZALBUV_WITH_SNOW,&
+                             KK%XDIR_ALB_WITH_SNOW, KK%XSCA_ALB_WITH_SNOW            )
     !
   ENDIF
   !
@@ -281,9 +306,9 @@ ENDIF
 !
 !Update albedo with snow for the next time step
 !
- CALL UNPACK_SAME_RANK(PK%NR_P,KK%XDIR_ALB_WITH_SNOW, PDIR_ALB_WITH_SNOW,ZPUT0)
- CALL UNPACK_SAME_RANK(PK%NR_P,KK%XSCA_ALB_WITH_SNOW, PSCA_ALB_WITH_SNOW,ZPUT0)
- CALL UNPACK_SAME_RANK(PK%NR_P,ZEMIST,PEMIST,ZPUT0)
+CALL UNPACK_SAME_RANK(PK%NR_P,KK%XDIR_ALB_WITH_SNOW, PDIR_ALB_WITH_SNOW,ZPUT0)
+CALL UNPACK_SAME_RANK(PK%NR_P,KK%XSCA_ALB_WITH_SNOW, PSCA_ALB_WITH_SNOW,ZPUT0)
+CALL UNPACK_SAME_RANK(PK%NR_P,ZEMIST,PEMIST,ZPUT0)
 !
 !-------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('UPDATE_RAD_ISBA_N',1,ZHOOK_HANDLE)

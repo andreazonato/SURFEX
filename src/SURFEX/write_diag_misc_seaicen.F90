@@ -36,6 +36,7 @@ USE MODD_DATA_COVER_n, ONLY : DATA_COVER_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 USE MODD_DIAG_MISC_SEAICE_n, ONLY : DIAG_MISC_SEAICE_t
 USE MODD_SEAFLUX_n, ONLY : SEAFLUX_t
+USE MODD_SURF_PAR, ONLY: LEN_HREC
 !
 USE MODD_SFX_OASIS,      ONLY : LCPL_SEAICE
 !
@@ -66,7 +67,7 @@ TYPE(SEAFLUX_t), INTENT(INOUT) :: S
 !              -------------------------------
 !
 INTEGER           :: IRESP          ! IRESP  : return-code if a problem appears
-CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 CHARACTER(LEN=100):: YCOMMENT       ! Comment string
 CHARACTER(LEN=2)  :: YNUM
 INTEGER           :: JSV, JSW

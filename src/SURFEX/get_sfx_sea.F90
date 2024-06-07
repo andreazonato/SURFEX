@@ -4,10 +4,10 @@
 !SFX_LIC for details. version 1.
 !     #########
       SUBROUTINE GET_SFX_SEA (S, U, W, &
-                              OCPL_SEAICE,OWATER,                       &
+                              OCPL_SEAICE,OWATER,OCPL_SEACARB,         &
                               PSEA_FWSU,PSEA_FWSV,PSEA_HEAT,PSEA_SNET, &
                               PSEA_WIND,PSEA_FWSM,PSEA_EVAP,PSEA_RAIN, &
-                              PSEA_SNOW,PSEA_WATF,                     &
+                              PSEA_SNOW,PSEA_WATF,PSEA_PRES,PSEA_CO2,  &
                               PSEAICE_HEAT,PSEAICE_SNET,PSEAICE_EVAP   )  
 !     ############################################################################
 !
@@ -37,6 +37,8 @@
 !!    MODIFICATIONS
 !!    -------------
 !!      Original    10/2013
+!!      Modified    11/2014 : J. Pianezze - Add surface pressure coupling parameter
+!!      R. Séférian   11/16 : Implement carbon cycle coupling (Earth system model)
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
@@ -67,8 +69,9 @@ TYPE(SEAFLUX_t), INTENT(INOUT) :: S
 TYPE(SURF_ATM_t), INTENT(INOUT) :: U
 TYPE(WATFLUX_t), INTENT(INOUT) :: W
 !
-LOGICAL,            INTENT(IN)  :: OCPL_SEAICE ! sea-ice / ocean key
-LOGICAL,            INTENT(IN)  :: OWATER      ! water included in sea smask
+LOGICAL,            INTENT(IN)  :: OCPL_SEAICE  ! sea-ice / ocean key
+LOGICAL,            INTENT(IN)  :: OWATER       ! water included in sea smask
+LOGICAL,            INTENT(IN)  :: OCPL_SEACARB ! carbon cycle / ocean key
 !
 REAL, DIMENSION(:), INTENT(OUT) :: PSEA_FWSU  ! Cumulated zonal wind stress       (Pa.s)
 REAL, DIMENSION(:), INTENT(OUT) :: PSEA_FWSV  ! Cumulated meridian wind stress    (Pa.s)
@@ -80,6 +83,8 @@ REAL, DIMENSION(:), INTENT(OUT) :: PSEA_EVAP  ! Cumulated Evaporation           
 REAL, DIMENSION(:), INTENT(OUT) :: PSEA_RAIN  ! Cumulated Rainfall rate           (kg/m2)
 REAL, DIMENSION(:), INTENT(OUT) :: PSEA_SNOW  ! Cumulated Snowfall rate           (kg/m2)
 REAL, DIMENSION(:), INTENT(OUT) :: PSEA_WATF  ! Cumulated Net water flux (kg/m2)
+REAL, DIMENSION(:), INTENT(OUT) :: PSEA_PRES  ! Cumulated Surface pressure        (Pa.s)
+REAL, DIMENSION(:), INTENT(OUT) :: PSEA_CO2   ! Cumulated atmospheric co2         (ppm.s)
 !
 REAL, DIMENSION(:), INTENT(OUT) :: PSEAICE_HEAT ! Cumulated Sea-ice non solar net heat flux (J/m2)
 REAL, DIMENSION(:), INTENT(OUT) :: PSEAICE_SNET ! Cumulated Sea-ice solar net heat flux     (J/m2)
@@ -97,6 +102,7 @@ REAL, DIMENSION(SIZE(PSEA_HEAT))  :: ZEVAP
 REAL, DIMENSION(SIZE(PSEA_HEAT))  :: ZRAIN
 REAL, DIMENSION(SIZE(PSEA_HEAT))  :: ZSNOW
 REAL, DIMENSION(SIZE(PSEA_HEAT))  :: ZFWSM
+REAL, DIMENSION(SIZE(PSEA_HEAT))  :: ZPRES
 !
 REAL, DIMENSION(SIZE(PSEA_HEAT))  :: ZSNET_ICE
 REAL, DIMENSION(SIZE(PSEA_HEAT))  :: ZHEAT_ICE
@@ -121,6 +127,8 @@ PSEA_EVAP (:) = XUNDEF
 PSEA_RAIN (:) = XUNDEF
 PSEA_SNOW (:) = XUNDEF
 PSEA_WATF (:) = XUNDEF
+PSEA_PRES (:) = XUNDEF
+PSEA_CO2  (:) = XUNDEF
 !
 PSEAICE_HEAT (:) = XUNDEF
 PSEAICE_SNET (:) = XUNDEF
@@ -135,6 +143,7 @@ ZFWSM (:) = XUNDEF
 ZEVAP (:) = XUNDEF
 ZRAIN (:) = XUNDEF
 ZSNOW (:) = XUNDEF
+ZPRES (:) = XUNDEF
 !
 ZHEAT_ICE (:) = XUNDEF
 ZSNET_ICE (:) = XUNDEF
@@ -154,6 +163,7 @@ IF(U%NSIZE_SEA>0)THEN
   CALL UNPACK_SAME_RANK(U%NR_SEA(:),S%XCPL_SEA_RAIN(:),PSEA_RAIN(:),XUNDEF)
   CALL UNPACK_SAME_RANK(U%NR_SEA(:),S%XCPL_SEA_SNOW(:),PSEA_SNOW(:),XUNDEF)
   CALL UNPACK_SAME_RANK(U%NR_SEA(:),S%XCPL_SEA_FWSM(:),PSEA_FWSM(:),XUNDEF)
+  CALL UNPACK_SAME_RANK(U%NR_SEA(:),S%XCPL_SEA_PRES(:),PSEA_PRES(:),XUNDEF)
   S%XCPL_SEA_WIND(:) = 0.0
   S%XCPL_SEA_EVAP(:) = 0.0
   S%XCPL_SEA_HEAT(:) = 0.0
@@ -163,6 +173,7 @@ IF(U%NSIZE_SEA>0)THEN
   S%XCPL_SEA_RAIN(:) = 0.0
   S%XCPL_SEA_SNOW(:) = 0.0
   S%XCPL_SEA_FWSM(:) = 0.0
+  S%XCPL_SEA_PRES(:) = 0.0
 !
   IF (OCPL_SEAICE) THEN
     CALL UNPACK_SAME_RANK(U%NR_SEA(:),S%XCPL_SEAICE_SNET(:),PSEAICE_SNET(:),XUNDEF)
@@ -171,6 +182,11 @@ IF(U%NSIZE_SEA>0)THEN
     S%XCPL_SEAICE_SNET(:) = 0.0
     S%XCPL_SEAICE_EVAP(:) = 0.0
     S%XCPL_SEAICE_HEAT(:) = 0.0  
+  ENDIF
+!
+  IF (OCPL_SEACARB) THEN
+    CALL UNPACK_SAME_RANK(U%NR_SEA(:),S%XCPL_SEA_CO2(:),PSEA_CO2(:),XUNDEF)
+    S%XCPL_SEA_CO2(:) = 0.0  
   ENDIF
 !
 ENDIF
@@ -189,6 +205,7 @@ IF (OWATER.AND.U%NSIZE_WATER>0) THEN
   CALL UNPACK_SAME_RANK(U%NR_WATER(:),W%XCPL_WATER_RAIN(:),ZRAIN(:),XUNDEF)
   CALL UNPACK_SAME_RANK(U%NR_WATER(:),W%XCPL_WATER_SNOW(:),ZSNOW(:),XUNDEF)
   CALL UNPACK_SAME_RANK(U%NR_WATER(:),W%XCPL_WATER_FWSM(:),ZFWSM(:),XUNDEF)
+  CALL UNPACK_SAME_RANK(U%NR_WATER(:),W%XCPL_WATER_PRES(:),ZPRES(:),XUNDEF)
 !
   WHERE(U%XWATER(:)>0.0) 
     PSEA_WIND(:) = (U%XSEA(:)*PSEA_WIND(:)+U%XWATER(:)*ZWIND(:))/(U%XSEA(:)+U%XWATER(:))
@@ -200,6 +217,7 @@ IF (OWATER.AND.U%NSIZE_WATER>0) THEN
     PSEA_RAIN(:) = (U%XSEA(:)*PSEA_RAIN(:)+U%XWATER(:)*ZRAIN(:))/(U%XSEA(:)+U%XWATER(:))
     PSEA_SNOW(:) = (U%XSEA(:)*PSEA_SNOW(:)+U%XWATER(:)*ZSNOW(:))/(U%XSEA(:)+U%XWATER(:))
     PSEA_FWSM(:) = (U%XSEA(:)*PSEA_FWSM(:)+U%XWATER(:)*ZFWSM(:))/(U%XSEA(:)+U%XWATER(:))
+    PSEA_PRES(:) = (U%XSEA(:)*PSEA_PRES(:)+U%XWATER(:)*ZPRES(:))/(U%XSEA(:)+U%XWATER(:))
   ENDWHERE 
 !
   W%XCPL_WATER_WIND(:) = 0.0
@@ -211,6 +229,7 @@ IF (OWATER.AND.U%NSIZE_WATER>0) THEN
   W%XCPL_WATER_RAIN(:) = 0.0
   W%XCPL_WATER_SNOW(:) = 0.0
   W%XCPL_WATER_FWSM(:) = 0.0
+  W%XCPL_WATER_PRES(:) = 0.0
 !
   IF (OCPL_SEAICE) THEN
     CALL UNPACK_SAME_RANK(U%NR_WATER(:),W%XCPL_WATERICE_SNET(:),ZSNET_ICE(:),XUNDEF)

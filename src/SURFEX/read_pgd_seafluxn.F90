@@ -45,6 +45,7 @@ USE MODD_SEAFLUX_n, ONLY : SEAFLUX_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 USE MODD_SURF_ATM_GRID_n, ONLY : SURF_ATM_GRID_t
 USE MODD_GRID_CONF_PROJ_n, ONLY : GRID_CONF_PROJ_t
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODD_TYPE_DATE_SURF
 !
@@ -83,7 +84,7 @@ TYPE(GRID_CONF_PROJ_t),INTENT(INOUT) :: GCP
 !
 INTEGER           :: IRESP          ! Error code after redding
 !
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 !
 INTEGER           :: IVERSION   ! surface version
 REAL(KIND=JPRB) :: ZHOOK_HANDLE

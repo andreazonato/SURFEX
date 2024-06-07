@@ -25,6 +25,7 @@ SUBROUTINE PREP_SEAFLUX_GRIB(HPROGRAM,HSURF,HFILE,KLUOUT,PFIELD)
 !!    MODIFICATIONS
 !!    -------------
 !!      Original    01/2004
+!!      Modified    05/2018, S. Faroux/P. Wautelet: bug correction for allocation of PFIELD
 !!------------------------------------------------------------------
 !
 
@@ -74,7 +75,7 @@ SELECT CASE(HSURF)
 !
   CASE('ZS     ')
     SELECT CASE (CINMODEL)
-      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM')
+      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM','NCEP  ')
         CALL READ_GRIB_ZS_SEA(HFILE,KLUOUT,CINMODEL,ZMASK,ZFIELD)
         ALLOCATE(PFIELD(SIZE(ZFIELD),1))
         PFIELD(:,1) = ZFIELD(:)
@@ -87,7 +88,7 @@ SELECT CASE(HSURF)
 !
   CASE('SST    ')
     SELECT CASE (CINMODEL)
-      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM')
+      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM','NCEP  ')
         CALL READ_GRIB_SST(HFILE,KLUOUT,CINMODEL,ZMASK,ZFIELD)
         ALLOCATE(PFIELD(SIZE(ZFIELD),1))
         PFIELD(:,1) = ZFIELD(:)

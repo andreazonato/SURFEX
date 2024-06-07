@@ -37,6 +37,7 @@
 !!      Modified    08/2009 : cumulative sea flux 
 !!      B. decharme 04/2013 : Add EVAP and SUBL diag
 !!      S.Senesi    01/2014 : introduce fractional seaice 
+!!      Modified    11/2014 : J. Pianezze : Add surface pressure coupling parameter
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
@@ -51,8 +52,8 @@ USE MODD_SEAFLUX_n, ONLY : SEAFLUX_t
 #ifdef SFX_OL
 USE MODN_IO_OFFLINE,     ONLY : LRESTART
 #endif
-USE MODD_SURF_PAR,       ONLY : XUNDEF
-USE MODD_SFX_OASIS,      ONLY : LCPL_SEA,LCPL_SEAICE
+USE MODD_SURF_PAR,       ONLY : XUNDEF, LEN_HREC
+USE MODD_SFX_OASIS,      ONLY : LCPL_SEA,LCPL_SEACARB
 !  
 USE MODI_READ_SURF
 !
@@ -64,23 +65,23 @@ IMPLICIT NONE
 !*       0.1   Declarations of arguments
 !              -------------------------
 !
-TYPE(DIAG_OCEAN_t), INTENT(INOUT) :: DOC
+TYPE(DIAG_OCEAN_t),   INTENT(INOUT) :: DOC
 TYPE(DIAG_OPTIONS_t), INTENT(INOUT) :: DGO
-TYPE(DIAG_t), INTENT(INOUT) :: D
-TYPE(DIAG_t), INTENT(INOUT) :: DC
-LOGICAL, INTENT(IN) :: OREAD_BUDGETC
-TYPE(SEAFLUX_t), INTENT(INOUT) :: S
+TYPE(DIAG_t),         INTENT(INOUT) :: D
+TYPE(DIAG_t),         INTENT(INOUT) :: DC
+TYPE(SEAFLUX_t),      INTENT(INOUT) :: S
 !
-INTEGER, INTENT(IN) :: KLU   ! size of arrays
-INTEGER, INTENT(IN) :: KSW   ! number of SW spectral bands
- CHARACTER(LEN=6), INTENT(IN):: HPROGRAM  ! program calling
+LOGICAL,          INTENT(IN) :: OREAD_BUDGETC
+INTEGER,          INTENT(IN) :: KLU   ! size of arrays
+INTEGER,          INTENT(IN) :: KSW   ! number of SW spectral bands
+CHARACTER(LEN=6), INTENT(IN) :: HPROGRAM  ! program calling
 !
 !*       0.2   Declarations of local variables
 !              -------------------------------
 !
 INTEGER           :: IVERSION
 INTEGER           :: IRESP          ! IRESP  : return-code if a problem appears
-CHARACTER(LEN=12) :: YREC           ! Name of the article to be read
+CHARACTER(LEN=LEN_HREC) :: YREC           ! Name of the article to be read
 !
 REAL(KIND=JPRB)   :: ZHOOK_HANDLE
 !
@@ -89,7 +90,7 @@ IF (LHOOK) CALL DR_HOOK('DIAG_SEAFLUX_INIT_N',0,ZHOOK_HANDLE)
 !
 !* surface energy budget
 !
- CALL ALLOC_BUD(DGO,D,KLU,KSW)
+CALL ALLOC_BUD(DGO,D,KLU,KSW)
 !
 IF (DGO%LSURF_BUDGET.OR.DGO%LSURF_BUDGETC) THEN
   !
@@ -192,7 +193,7 @@ ENDIF
 !
 !* Earth system model coupling variables
 !
-IF(LCPL_SEA.OR.S%LHANDLE_SIC)THEN
+IF(LCPL_SEA)THEN
 !        
   ALLOCATE(S%XCPL_SEA_WIND(KLU))
   ALLOCATE(S%XCPL_SEA_FWSU(KLU))
@@ -203,6 +204,7 @@ IF(LCPL_SEA.OR.S%LHANDLE_SIC)THEN
   ALLOCATE(S%XCPL_SEA_RAIN(KLU))
   ALLOCATE(S%XCPL_SEA_SNOW(KLU))
   ALLOCATE(S%XCPL_SEA_FWSM(KLU))
+  ALLOCATE(S%XCPL_SEA_PRES(KLU))  
   S%XCPL_SEA_WIND(:) = 0.0
   S%XCPL_SEA_FWSU(:) = 0.0
   S%XCPL_SEA_FWSV(:) = 0.0
@@ -212,6 +214,7 @@ IF(LCPL_SEA.OR.S%LHANDLE_SIC)THEN
   S%XCPL_SEA_RAIN(:) = 0.0
   S%XCPL_SEA_SNOW(:) = 0.0
   S%XCPL_SEA_FWSM(:) = 0.0
+  S%XCPL_SEA_PRES(:) = 0.0  
 !
 ELSE
   ALLOCATE(S%XCPL_SEA_WIND(0))
@@ -223,6 +226,14 @@ ELSE
   ALLOCATE(S%XCPL_SEA_RAIN(0))
   ALLOCATE(S%XCPL_SEA_SNOW(0))
   ALLOCATE(S%XCPL_SEA_FWSM(0))
+  ALLOCATE(S%XCPL_SEA_PRES(0))  
+ENDIF
+!
+IF(LCPL_SEACARB.AND.LCPL_SEA)THEN
+  ALLOCATE(S%XCPL_SEA_CO2(KLU))
+  S%XCPL_SEA_CO2(:) = 0.0
+ELSE
+  ALLOCATE(S%XCPL_SEA_CO2(0))
 ENDIF
 !
 IF (LHOOK) CALL DR_HOOK('DIAG_SEAFLUX_INIT_N',1,ZHOOK_HANDLE)

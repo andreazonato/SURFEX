@@ -21,7 +21,7 @@ USE MODD_SFX_OASIS, ONLY : LOASIS
 USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, NPROC, NCOMM, NINDEX, NSIZE_TASK, NSIZE, WLOG_MPI, &
                             NREQ, NNUM, NDIM_FULL_INIT
 !
-USE MODN_IO_OFFLINE, ONLY : LLAND_USE
+USE MODN_IO_OFFLINE, ONLY : LWRITE_TOPO
 !
 USE MODD_SURF_CONF,       ONLY : CPROGNAME
 USE MODD_MASK, ONLY : NMASK_FULL
@@ -82,7 +82,7 @@ REAL(KIND=JPRB) :: ZHOOK_HANDLE
 IF (LHOOK) CALL DR_HOOK('INIT_INDEX_MPI',0,ZHOOK_HANDLE)
 !
 GSPEC = (HINIT=='PGD' .OR. (HINIT=='PRE' .AND. LOASIS) .OR. &
-        (HINIT=='OFF' .AND. (LLAND_USE .OR. LXIOS .OR. LOASIS)))
+        (HINIT=='OFF' .AND. (LWRITE_TOPO .OR. LXIOS .OR. LOASIS)))
 !
 ALLOCATE(NREQ((NPROC-1)*2))
 !
@@ -114,7 +114,8 @@ IF ( NRANK==NPIO ) THEN
     !
     CALL READ_SURF(HPROGRAM, 'DIM_FULL  ', U%NDIM_FULL, IRESP, HDIR='A')
     !
-    CALL READ_ARRANGE_COVER(HPROGRAM, U%LWATER_TO_NATURE, U%LTOWN_TO_ROCK,'A')
+    CALL READ_ARRANGE_COVER(HPROGRAM, U%LWATER_TO_NATURE, U%LTOWN_TO_ROCK, &
+         U%LTOWN_TO_COVER, U%NREPLACE_COVER, 'A')
     CALL READ_COVER_GARDEN(HPROGRAM, U%LGARDEN,'A')
     !
     CALL END_IO_SURF_n(HPROGRAM)
@@ -223,9 +224,11 @@ IF (NRANK==NPIO) THEN
     INBMIN = MINVAL(INBPTS)
     IP0 = MAXVAL(MINLOC(INBPTS)) - 1
     !   
-    IF (.NOT. GSHADOWS) THEN
+    IF ((.NOT. GSHADOWS) .AND. (.NOT. LWRITE_TOPO)) THEN
     ! Matthieu Lafaysse :
-    ! With shadows we don't want the repartition of points to be modified by the following instructions
+    ! With shadows or LWRITE_TOPO we don't want the repartition of points to be modified by the following instructions
+    ! The following instructions prevent the use of very useful MPI functions such as MPI_ALLGATHER
+    ! Discussions are needed with GMME to remove definitely this part of the code which disturbs any attempt of logic in the topology.
     
       DO WHILE( INBPTS(NPIO) > NINT(PIO_FRAC*INBMIN) )
         !
@@ -468,8 +471,9 @@ USE MODN_IO_OFFLINE, ONLY : LWR_VEGTYPE
 !
 USE MODD_DATA_COVER_PAR, ONLY : NVEGTYPE, JPCOVER
 !
-USE MODD_SURF_PAR,       ONLY : XUNDEF
+USE MODD_SURF_PAR,       ONLY : XUNDEF, LEN_HREC
 !
+USE MODI_READ_ARRANGE_COVER
 USE MODI_AV_PGD
 !
 IMPLICIT NONE
@@ -502,7 +506,7 @@ CHARACTER(LEN=6) :: YNATURE
 LOGICAL, DIMENSION(:), ALLOCATABLE :: GCOVER
 LOGICAL :: GDATA_VEGTYPE, GDIM, GDIM2
 !
-CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 INTEGER           :: IVERSION, IBUGFIX
 !
 REAL(KIND=JPRB) :: ZHOOK_HANDLE, ZHOOK_HANDLE_OMP
@@ -533,6 +537,9 @@ IF (GDIM) THEN
 ELSE
   U%LECOSG = .FALSE.
 ENDIF
+!
+ CALL READ_ARRANGE_COVER(HPROGRAM,U%LWATER_TO_NATURE,U%LTOWN_TO_ROCK,&
+                     U%LTOWN_TO_COVER, U%NREPLACE_COVER) ! 'A'
 !
  CALL END_IO_SURF_n(HPROGRAM)
 !

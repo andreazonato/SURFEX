@@ -47,6 +47,8 @@
 !!      Modif B Vincendon 11/2011 : stock managed in three distinct variables
 !!      Modif B Vincendon 03/2014 : correction of a bug on drainage still in the
 !                                   river
+!!      Modif B Vincendon 07/2017 : adding possibility of varing river speed according
+!!                                  to the discharge value(LSPEED_VAR)
 !-------------------------------------------------------------------------------
 !
 !*       0.     DECLARATIONS
@@ -55,7 +57,11 @@
 USE MODD_SURF_PAR,        ONLY:XUNDEF
 !
 USE MODD_TOPODYN, ONLY : XTOPD_STEP, NNCAT, XQTOT, NNMC, &
-                         XTIME_TOPD, XQB_RUN, XQB_DR, XTIME_TOPD_DRAIN, NNB_TOPD_STEP
+                         XTIME_TOPD, XQB_RUN, XQB_DR, &
+                         XTIME_TOPD_DRAIN, NNB_TOPD_STEP,&
+                         XSPEEDH, XSPEEDR, XDHIL, XDRIV, &
+                         XA_SPEED, XB_SPEED, XMAX_SPEED, LSPEEDR_VAR,NMESHT
+
 USE MODD_COUPLING_TOPD, ONLY: XRUN_TOROUT, XDR_TOROUT, NNB_STP_RESTART
 !
 USE MODI_GET_LUOUT
@@ -78,12 +84,12 @@ INTEGER, INTENT(IN)              :: KSTEP   ! current integration step
 !*      0.2    declarations of local variables
 !
 !
-INTEGER                            :: JCAT, JJ, JI ! Loop variables
+INTEGER                            :: JCAT, JJ     ! Loop variables
 INTEGER                            :: JSTEP        ! current or future integration steps
 REAL, DIMENSION(NNCAT,NNB_TOPD_STEP+NNB_STP_RESTART) :: ZRUN_TOROUT,ZDR_TOROUT ! Kg/m2
                                                    ! water of runoff and drainage resp. still in the river 
                                                    ! and added to the discharge for the current simulation
- CHARACTER(LEN=3)                  :: YSTEP
+REAL :: ZA,ZB
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !-------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('ROUTING',0,ZHOOK_HANDLE)
@@ -98,13 +104,33 @@ DO JCAT=1,NNCAT
   !
   !*       2.0    Runoff by geomorpho transfer function
   !               -------------------------------------
-  DO JJ=1,NNMC(JCAT)
+  IF (LSPEEDR_VAR) THEN 
+    ZA=XA_SPEED(JCAT)
+    ZB=XB_SPEED(JCAT) 
+    IF (KSTEP>1)THEN
+      XSPEEDR(JCAT)=MIN(EXP(ZA*LOG(MAX(XQTOT(JCAT,KSTEP),0.001))+ZB),XMAX_SPEED(JCAT))
+    ENDIF
+    write(*,*) 'VARIABLE SPEED IS ACTIVATED, XSPEEDR BV,',&
+              JCAT,'= ',XSPEEDR(JCAT)/NMESHT
+  ENDIF
   !
-    IF ( PRO(JCAT,JJ) > 0.0 .AND. PRO(JCAT,JJ) < XUNDEF ) THEN
+  DO JJ=1,NNMC(JCAT)
+    !
+    IF (LSPEEDR_VAR) THEN
+      !
+      IF ( XSPEEDH(JCAT) > 0.0 .AND. XSPEEDR(JCAT) > 0.0 .AND.&
+           XDHIL(JCAT,JJ) < XUNDEF .AND. XDRIV(JCAT,JJ) < XUNDEF) &
+        XTIME_TOPD(JCAT,JJ)=XDHIL(JCAT,JJ) / XSPEEDH(JCAT) + &
+                       XDRIV(JCAT,JJ) / XSPEEDR(JCAT)
+    ENDIF
+    !
+    IF ( PRO(JCAT,JJ) > 0.0 .AND. PRO(JCAT,JJ) < XUNDEF &
+         .AND.XTOPD_STEP > 0.0 .AND. XTIME_TOPD(JCAT,JJ) > 0.0 &
+         .AND. XTIME_TOPD(JCAT,JJ)< XUNDEF ) THEN
       !
       JSTEP = INT(XTIME_TOPD(JCAT,JJ) / XTOPD_STEP) + KSTEP 
       !
-      IF ( JSTEP.LE.NNB_TOPD_STEP ) THEN
+      IF ( JSTEP.LE.NNB_TOPD_STEP.AND.( JSTEP /= 0) ) THEN
         !
         XQB_RUN(JCAT,JSTEP) = XQB_RUN(JCAT,JSTEP) + PRO(JCAT,JJ)
         XQTOT(JCAT,JSTEP) = XQTOT(JCAT,JSTEP) + PRO(JCAT,JJ)
@@ -117,15 +143,16 @@ DO JCAT=1,NNCAT
       !
     ENDIF
     !
-  !
-  !*       3.0    Drainage by geomorpho transfer function
-  !               -------------------------------------
+    !*       3.0    Drainage by geomorpho transfer function
+    !               -------------------------------------
     !
-    IF ((PDR(JCAT,JJ) > 0.0).AND.(PDR(JCAT,JJ)<XUNDEF)) THEN
+    IF ((PDR(JCAT,JJ) > 0.0).AND.(PDR(JCAT,JJ)<XUNDEF)&
+         .AND.XTOPD_STEP > 0.0 .AND. XTIME_TOPD(JCAT,JJ) > 0.0 &
+         .AND. XTIME_TOPD(JCAT,JJ)< XUNDEF  ) THEN
       !
       JSTEP = INT(XTIME_TOPD_DRAIN(JCAT,JJ) / XTOPD_STEP) + KSTEP
       !
-      IF (JSTEP.LE.NNB_TOPD_STEP) THEN
+      IF (JSTEP.LE.NNB_TOPD_STEP.AND.( JSTEP /= 0)) THEN
         !
         XQB_DR(JCAT,JSTEP) = XQB_DR(JCAT,JSTEP) + PDR(JCAT,JJ)
         XQTOT(JCAT,JSTEP) = XQTOT(JCAT,JSTEP) + PDR(JCAT,JJ) 

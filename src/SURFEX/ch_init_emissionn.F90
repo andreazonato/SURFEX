@@ -28,12 +28,14 @@
 !!      P.Tulet  01/01/04  introduction of rhodref for externalization
 !!      M.Leriche 04/2014  change length of CHARACTER for emission 6->12
 !!      M.Leriche & V. Masson 05/16 bug in write emis fields for nest
+!!      J. Pianezze 04/17 wrong length of YCOMMENT (100 instead of 40)
 !-----------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
 !
 !
 USE MODD_CH_EMIS_FIELD_n, ONLY : CH_EMIS_FIELD_t
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_GET_LUOUT
 USE MODI_BUILD_EMISSTAB_n
@@ -78,7 +80,7 @@ INTEGER             :: JSPEC                 ! Loop index for cover data
 INTEGER             :: IIND1,IIND2           ! Indices counter
 !
  CHARACTER(LEN=40)                 :: YSPEC_NAME ! species name
- CHARACTER(LEN=12), DIMENSION(:),ALLOCATABLE :: YEMIS_NAME ! species name
+ CHARACTER(LEN=LEN_HREC), DIMENSION(:),ALLOCATABLE :: YEMIS_NAME ! species name
 INTEGER,DIMENSION(:),ALLOCATABLE  :: INBTIMES! number of emission times array
 INTEGER,DIMENSION(:),ALLOCATABLE  :: ITIMES  ! emission times for a species
 INTEGER,DIMENSION(:),ALLOCATABLE  :: IOFFNDX ! index array of offline emission species
@@ -131,6 +133,7 @@ ELSE
 END IF
 
 IF (.NOT. ASSOCIATED(CHE%CEMIS_AREA))   ALLOCATE(CHE%CEMIS_AREA(CHE%NEMISPEC_NBR))
+IF (.NOT. ASSOCIATED(CHE%NEMIS_NBT))    ALLOCATE(CHE%NEMIS_NBT (CHE%NEMISPEC_NBR))
 IF (.NOT. ASSOCIATED(CHE%NEMIS_TIME))   ALLOCATE(CHE%NEMIS_TIME(CHE%NEMIS_NBR))
 CHE%NEMIS_TIME(:) = -1
 !
@@ -210,6 +213,8 @@ CHE%NTIME_MAX = MAXVAL(CHE%NEMIS_TIME)
   END IF
 !
 END DO
+!
+CHE%NEMIS_NBT(:) = INBTIMES(:)
 !
 WRITE(ILUOUT,*) '---- Nunmer of OFFLINE species = ',INBOFF
 WRITE(ILUOUT,*) 'INBTIMES=',INBTIMES

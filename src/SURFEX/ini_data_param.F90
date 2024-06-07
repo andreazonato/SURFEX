@@ -1,9 +1,10 @@
+!
 !SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
 !SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 !     #########################
-      SUBROUTINE INI_DATA_PARAM(PLAI, PH_TREE,        &
+      SUBROUTINE INI_DATA_PARAM(PLAI, PH_TREE,                                      &
                                 PALBNIR_VEG, PALBVIS_VEG, PALBUV_VEG, PRSMIN,       &
                                 PRGL, PCV, PGAMMA, PGMES, PGC, PBSLAI, PSEFOLD,     &
                                 PLAIMIN_IN, PLAIMIN_OUT, PDMAX, PSTRESS, PF2I,      &
@@ -11,8 +12,8 @@
                                 PGREEN, PZ0, PZ0_O_Z0H, PEMIS_ECO, PWRMAX_CF,       &
                                 PROOT_LIN, PROOT_EXTINCTION, PSOILRC_SO2,           &
                                 PSOILRC_O3, PRE25, PCE_NITRO, PCF_NITRO, PCNA_NITRO,&
-                                PGMES_ST, PGC_ST, PBSLAI_ST, PSEFOLD_ST, PDMAX_ST  ,&
-                                PGNDLITTER, PH_VEG, PZ0LITTER, OAGRI_TO_GRASS       )
+                                PGMES_ST, PGC_ST, PBSLAI_ST, PSEFOLD_ST, PDMAX_ST,  &
+                                PGNDLITTER, PH_VEG, PZ0LITTER                       )
 !     #########################
 !
 !!**** *INI_DATA_PARAM* initializes secondary cover-field correspondance arrays
@@ -48,14 +49,14 @@
 !!    V Masson    03/04/2002 set RSMIN value to 120 for NVT_TROG and NVT_C4
 !!    L Jarlan    15/10/2004 modify xdata_gmes following Gibelin
 !!    P Le Moigne 09/2005 AGS modifs of L. Jarlan (duplicate arrays for ast, lst or nit options)
-!!    S. Lafont      03/09 : change unit of RE25
-!!    S. Faroux      03/09 : irrigated crops are assumed C4 crops
-!!    S. Lafont      09/11 : Reco bare soil is 0; corrected comments
-!!    B. Decharme    07/12 : Ponderation coefficient for cumulative root fraction of evergreen forest
-!!    R. Alkama      05/12 : Add 7 new vegtype (19 rather than 12)
-!!    B. Decharme    05/13 : new param for equatorial forest
-!!    P. Samuelsson  10/14 : Multi-energy balance (MEB)
-!!Seferian & Delire  06/15 : Updating Nitrogen content and coef (PCF,PCNA) and 
+!!    S. Lafont          03/09 : change unit of RE25
+!!    S. Faroux          03/09 : irrigated crops are assumed C4 crops
+!!    S. Lafont          09/11 : Reco bare soil is 0; corrected comments
+!!    B. Decharme        07/12 : Ponderation coefficient for cumulative root fraction of evergreen forest
+!!    R. Alkama          05/12 : Add 7 new vegtype (19 rather than 12)
+!!    B. Decharme        05/13 : new param for equatorial forest
+!!    P. Samuelsson      10/14 : Multi-energy balance (MEB)
+!!    Seferian & Delire  06/15 : Updating Nitrogen content and coef (PCF,PCNA) and 
 !                            mesophyl conductance based on TRY database (Kattge et al., GCB 2011) and Jacobs Thesis
 !!
 !----------------------------------------------------------------------------
@@ -73,6 +74,7 @@ USE MODD_DATA_COVER_PAR, ONLY : NVT_NO, NVT_ROCK, NVT_SNOW, NVT_TEBD,   &
                                 NVEGTYPE, JPCOVER
 !
 USE MODD_REPROD_OPER,    ONLY : XEVERG_RSMIN
+USE MODD_SURF_ATM,       ONLY : LARP_PN
 !
 USE MODI_VEG_FROM_LAI
 USE MODI_GREEN_FROM_LAI
@@ -129,7 +131,6 @@ REAL, DIMENSION(:,:), INTENT(OUT), OPTIONAL :: PBSLAI_ST
 REAL, DIMENSION(:,:), INTENT(OUT), OPTIONAL :: PSEFOLD_ST
 REAL, DIMENSION(:,:), INTENT(OUT), OPTIONAL :: PDMAX_ST
 !
-LOGICAL, OPTIONAL, INTENT(IN) :: OAGRI_TO_GRASS
 !
 !            MEB parameters
 !            --------------
@@ -140,7 +141,6 @@ REAL, DIMENSION(:,:,:), INTENT(OUT), OPTIONAL :: PGNDLITTER
 !*    0.2    Declaration of local variables
 !      ------------------------------
 !
-LOGICAL            :: GAGRI_TO_GRASS
 INTEGER            :: IVT_C3, IVT_C3W, IVT_C3S, IVT_PARK, IVT_FLTR, IVT_FLGR
 INTEGER            :: JC                     ! class loop counter
 !
@@ -154,11 +154,6 @@ REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !            -------------------------------------
 !
 IF (LHOOK) CALL DR_HOOK('INI_DATA_PARAM',0,ZHOOK_HANDLE)
-!
-GAGRI_TO_GRASS = .FALSE.
-!
-!When set, C3 and C4 crop values are replaced by value for C3 grass
-IF(PRESENT(OAGRI_TO_GRASS))GAGRI_TO_GRASS=OAGRI_TO_GRASS
 !
 !-------------------------------------------------------------------------------
 !*    7.5    albnir (veg only)
@@ -218,28 +213,9 @@ IF (PRESENT(PALBUV_VEG)) THEN
   PALBUV_VEG(:,NVT_GRAS)= 0.08
   PALBUV_VEG(:,NVT_BOGR)= 0.08
   PALBUV_VEG(:,NVT_TROG)= 0.125
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PALBUV_VEG(:,NVT_C3  )= 0.08
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PALBUV_VEG(:,NVT_C3W )= 0.08
-      PALBUV_VEG(:,NVT_C3S )= 0.08
-    ENDIF
-    PALBUV_VEG(:,NVT_C4  )= 0.08
-    IF (NVT_IRR/=0) THEN
-      PALBUV_VEG(:,NVT_IRR )= 0.08
-    ENDIF
-    !
-  ELSE
-    !
-    IF (NVT_IRR/=0) THEN
-      PALBUV_VEG(:,NVT_IRR )= 0.045
-    ENDIF
-    !
+  IF (NVT_IRR/=0) THEN
+     PALBUV_VEG(:,NVT_IRR )= 0.045
   ENDIF
-  !
   IF (NVT_PARK/=0) THEN
     PALBUV_VEG(:,NVT_PARK)= 0.08
   ELSEIF (NVT_FLGR/=0) THEN
@@ -268,17 +244,9 @@ IF (PRESENT(PRSMIN)) THEN
   !
   PRSMIN(:,NVT_TRBE)= XEVERG_RSMIN
   PRSMIN(:,NVT_TROG)= 120.
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    PRSMIN(:,NVT_C4  )= 40.
-    IF (NVT_IRR/=0) THEN
-      PRSMIN(:,NVT_IRR )= 40.
-    ENDIF
-  ELSE
-    PRSMIN(:,NVT_C4  )= 120.
-    IF (NVT_IRR/=0) THEN
-      PRSMIN(:,NVT_IRR )= 120.
-    ENDIF
+  PRSMIN(:,NVT_C4  )= 120.
+  IF (NVT_IRR/=0) THEN
+     PRSMIN(:,NVT_IRR )= 120.
   ENDIF
   !
 ENDIF
@@ -340,18 +308,22 @@ ENDIF
 !*    7.10   Cv
 !            --
 IF (PRESENT(PCV)) THEN
-  PCV(:,:)=2.E-5
-  PCV(:,NVT_TEBD)= 1.E-5
-  PCV(:,NVT_TRBD)= 1.E-5
-  PCV(:,NVT_TEBE)= 1.E-5
-  PCV(:,NVT_BOBD)= 1.E-5
-  PCV(:,NVT_SHRB)= 1.E-5
-  PCV(:,NVT_BONE)= 1.E-5
-  PCV(:,NVT_TENE)= 1.E-5
-  PCV(:,NVT_BOND)= 1.E-5
-  PCV(:,NVT_TRBE)= 1.E-5 
-  IF (NVT_FLTR>0) THEN
-     PCV(:,NVT_FLTR) = 1.E-5
+  IF (LARP_PN) THEN
+    PCV(:,:)=0.8E-5
+  ELSE
+    PCV(:,:)=2.E-5
+    PCV(:,NVT_TEBD)= 1.E-5
+    PCV(:,NVT_TRBD)= 1.E-5
+    PCV(:,NVT_TEBE)= 1.E-5
+    PCV(:,NVT_BOBD)= 1.E-5
+    PCV(:,NVT_SHRB)= 1.E-5
+    PCV(:,NVT_BONE)= 1.E-5
+    PCV(:,NVT_TENE)= 1.E-5
+    PCV(:,NVT_BOND)= 1.E-5
+    PCV(:,NVT_TRBE)= 1.E-5 
+    IF (NVT_FLTR>0) THEN
+      PCV(:,NVT_FLTR) = 1.E-5
+    ENDIF
   ENDIF
 ENDIF    
 !-------------------------------------------------------------------------------
@@ -366,6 +338,7 @@ ENDIF
 !                crops :  used N. Canal's PhD thesis 
 !            --------------------------------------------------------------------
 IF (PRESENT(PGMES)) THEN
+  !
   PGMES(:,:)=0.020
   PGMES(:,NVT_TEBD)= 0.001
   PGMES(:,NVT_TRBD)= 0.001
@@ -379,34 +352,17 @@ IF (PRESENT(PGMES)) THEN
   IF (NVT_FLTR>0) THEN
      PGMES(:,NVT_FLTR) = 0.001
   ENDIF
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PGMES(:,NVT_C3  )= 0.020
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PGMES(:,NVT_C3W )= 0.020
-      PGMES(:,NVT_C3S )= 0.020
-    ENDIF
-    PGMES(:,NVT_C4  )= 0.020
-    IF (NVT_IRR/=0) THEN
-      PGMES(:,NVT_IRR )= 0.020
-    ENDIF
-    !
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PGMES(:,NVT_C3  )= 0.003
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PGMES(:,NVT_C3W )= 0.003
-      PGMES(:,NVT_C3S )= 0.003
-    ENDIF
-    PGMES(:,NVT_C4  )= 0.003
-    IF (NVT_IRR/=0) THEN
-      PGMES(:,NVT_IRR )= 0.003
-    ENDIF
-    !
+  IF (NVT_C3/=0) THEN
+     PGMES(:,NVT_C3  )= 0.003
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PGMES(:,NVT_C3W )= 0.003
+     PGMES(:,NVT_C3S )= 0.003
   ENDIF
+  PGMES(:,NVT_C4  )= 0.003
+  IF (NVT_IRR/=0) THEN
+     PGMES(:,NVT_IRR )= 0.003
+  ENDIF
+  !
 ENDIF    
 !
 IF (PRESENT(PGMES_ST)) THEN
@@ -424,33 +380,15 @@ IF (PRESENT(PGMES_ST)) THEN
   IF (NVT_FLTR>0) THEN
      PGMES_ST(:,NVT_FLTR) = 0.0018
   ENDIF
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PGMES_ST(:,NVT_C3  )= 0.001
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PGMES_ST(:,NVT_C3W )= 0.001
-      PGMES_ST(:,NVT_C3S )= 0.001
-    ENDIF
-    PGMES_ST(:,NVT_C4  )= 0.006
-    IF (NVT_IRR/=0) THEN
-      PGMES_ST(:,NVT_IRR )= 0.006
-    ENDIF
-    !
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PGMES_ST(:,NVT_C3  )= 0.00175
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PGMES_ST(:,NVT_C3W )= 0.00175
-      PGMES_ST(:,NVT_C3S )= 0.00175
-    ENDIF
-    PGMES_ST(:,NVT_C4  )= 0.0098
-    IF (NVT_IRR/=0) THEN
-      PGMES_ST(:,NVT_IRR )= 0.0098
-    ENDIF
-    !
+  IF (NVT_C3/=0) THEN
+     PGMES_ST(:,NVT_C3  )= 0.00175
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PGMES_ST(:,NVT_C3W )= 0.00175
+     PGMES_ST(:,NVT_C3S )= 0.00175
+  ENDIF
+  PGMES_ST(:,NVT_C4  )= 0.0098
+  IF (NVT_IRR/=0) THEN
+     PGMES_ST(:,NVT_IRR )= 0.0098
   ENDIF
   !
   PGMES_ST(:,NVT_GRAS )= 0.001
@@ -473,33 +411,15 @@ IF (PRESENT(PRE25)) THEN
   PRE25(:,NVT_BONE)= 1.8E-7
   PRE25(:,NVT_TENE)= 1.8E-7
   PRE25(:,NVT_BOND)= 1.8E-7
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PRE25(:,NVT_C3  )= 3.6E-7
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PRE25(:,NVT_C3W )= 3.6E-7
-      PRE25(:,NVT_C3S )= 3.6E-7
-    ENDIF
-    PRE25(:,NVT_C4  )= 3.6E-7
-    IF (NVT_IRR/=0) THEN
-      PRE25(:,NVT_IRR )= 3.6E-7    
-    ENDIF
-    !        
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PRE25(:,NVT_C3  )= 3.6E-7
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PRE25(:,NVT_C3W )= 3.6E-7
-      PRE25(:,NVT_C3S )= 3.6E-7
-    ENDIF
-    PRE25(:,NVT_C4  )= 3.0E-7
-    IF (NVT_IRR/=0) THEN
-      PRE25(:,NVT_IRR )= 3.0E-7
-    ENDIF
-    !
+  IF (NVT_C3/=0) THEN
+     PRE25(:,NVT_C3  )= 3.6E-7
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PRE25(:,NVT_C3W )= 3.6E-7
+     PRE25(:,NVT_C3S )= 3.6E-7
+  ENDIF
+  PRE25(:,NVT_C4  )= 3.0E-7
+  IF (NVT_IRR/=0) THEN
+     PRE25(:,NVT_IRR )= 3.0E-7
   ENDIF
   !
   !ecosystem respiration only if vegetetation is present
@@ -539,13 +459,6 @@ IF (PRESENT(PGC_ST)) THEN
     PGC_ST(:,NVT_C3W )= 0.00025
     PGC_ST(:,NVT_C3S )= 0.00025
   ENDIF
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    PGC_ST(:,NVT_C4  )= 0.00025
-    IF (NVT_IRR/=0) THEN
-      PGC_ST(:,NVT_IRR )= 0.00025
-    ENDIF
-  ENDIF
   ! 
   PGC_ST(:,NVT_GRAS)= 0.00025
   PGC_ST(:,NVT_BOGR)= 0.00025  
@@ -578,33 +491,15 @@ IF (PRESENT(PBSLAI)) THEN
   IF (NVT_FLTR>0) THEN
      PBSLAI(:,NVT_FLTR) = 0.25
   ENDIF 
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PBSLAI(:,NVT_C3  )= 0.36
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PBSLAI(:,NVT_C3W )= 0.36
-      PBSLAI(:,NVT_C3S )= 0.36
-    ENDIF
-    PBSLAI(:,NVT_C4  )= 0.36
-    IF (NVT_IRR/=0) THEN
-      PBSLAI(:,NVT_IRR )= 0.36  
-    ENDIF 
-    !        
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PBSLAI(:,NVT_C3  )= 0.06
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PBSLAI(:,NVT_C3W )= 0.06
-      PBSLAI(:,NVT_C3S )= 0.06
-    ENDIF
-    PBSLAI(:,NVT_C4  )= 0.06
-    IF (NVT_IRR/=0) THEN
-      PBSLAI(:,NVT_IRR )= 0.06 
-    ENDIF
-    !
+  IF (NVT_C3/=0) THEN
+     PBSLAI(:,NVT_C3  )= 0.06
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PBSLAI(:,NVT_C3W )= 0.06
+     PBSLAI(:,NVT_C3S )= 0.06
+  ENDIF
+  PBSLAI(:,NVT_C4  )= 0.06
+  IF (NVT_IRR/=0) THEN
+     PBSLAI(:,NVT_IRR )= 0.06 
   ENDIF
   !
 ENDIF
@@ -624,33 +519,15 @@ IF (PRESENT(PBSLAI_ST)) THEN
   IF (NVT_FLTR>0) THEN
      PBSLAI_ST(:,NVT_FLTR) = 0.125
   ENDIF
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PBSLAI_ST(:,NVT_C3  )= 0.08
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PBSLAI_ST(:,NVT_C3W )= 0.08
-      PBSLAI_ST(:,NVT_C3S )= 0.08
-    ENDIF
-    PBSLAI_ST(:,NVT_C4  )= 0.08
-    IF (NVT_IRR/=0) THEN
-      PBSLAI_ST(:,NVT_IRR )= 0.08
-    ENDIF
-    !
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PBSLAI_ST(:,NVT_C3  )= 0.06
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PBSLAI_ST(:,NVT_C3W )= 0.06
-      PBSLAI_ST(:,NVT_C3S )= 0.06
-    ENDIF
-    PBSLAI_ST(:,NVT_C4  )= 0.06
-    IF (NVT_IRR/=0) THEN
-      PBSLAI_ST(:,NVT_IRR )= 0.06
-    ENDIF
-    !
+  IF (NVT_C3/=0) THEN
+     PBSLAI_ST(:,NVT_C3  )= 0.06
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PBSLAI_ST(:,NVT_C3W )= 0.06
+     PBSLAI_ST(:,NVT_C3S )= 0.06
+  ENDIF
+  PBSLAI_ST(:,NVT_C4  )= 0.06
+  IF (NVT_IRR/=0) THEN
+     PBSLAI_ST(:,NVT_IRR )= 0.06
   ENDIF
   !
 ENDIF
@@ -689,22 +566,10 @@ IF (PRESENT(PDMAX_ST)) THEN
   IF (NVT_FLTR>0) THEN
      PDMAX_ST(:,NVT_FLTR) = 0.109
   ENDIF
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    PDMAX_ST(:,NVT_C4  )= 0.05
-    IF (NVT_IRR/=0) THEN
-      PDMAX_ST(:,NVT_IRR )= 0.05
-    ENDIF
-    !
-  ELSE
-    !
-    PDMAX_ST(:,NVT_C4  )= 0.033
-    IF (NVT_IRR/=0) THEN
-      PDMAX_ST(:,NVT_IRR )= 0.033
-    ENDIF
-    !
-  ENDIF  
+  PDMAX_ST(:,NVT_C4  )= 0.033
+  IF (NVT_IRR/=0) THEN
+     PDMAX_ST(:,NVT_IRR )= 0.033
+  ENDIF
   !  
   PDMAX_ST(:,NVT_TROG)= 0.052
   !
@@ -724,20 +589,6 @@ IF (PRESENT(PSTRESS)) THEN
   IF (NVT_FLTR>0) THEN
      PSTRESS(:,NVT_FLTR) = 0.
   ENDIF
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PSTRESS(:,NVT_C3  )= 0.
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PSTRESS(:,NVT_C3W )= 0.
-      PSTRESS(:,NVT_C3S )= 0.
-    ENDIF
-    IF (NVT_IRR/=0) THEN
-      PSTRESS(:,NVT_IRR )= 0.
-    ENDIF
-    !
-  ENDIF    
   !
   PSTRESS(:,NVT_C4  )= 0.
   !
@@ -771,36 +622,17 @@ IF (PRESENT(PSEFOLD)) THEN
   IF (NVT_FLTR>0) THEN
      PSEFOLD(:,NVT_FLTR) = 365.* XDAY
   ENDIF
+  IF (NVT_C3/=0) THEN
+     PSEFOLD(:,NVT_C3  )= 60.* XDAY
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PSEFOLD(:,NVT_C3W )= 60.* XDAY
+     PSEFOLD(:,NVT_C3S )= 60.* XDAY
+  ENDIF
   !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PSEFOLD(:,NVT_C3  )= 90.* XDAY
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PSEFOLD(:,NVT_C3W )= 90.* XDAY
-      PSEFOLD(:,NVT_C3S )= 90.* XDAY
-    ENDIF
-    !
-    PSEFOLD(:,NVT_C4  )= 90.* XDAY
-    IF (NVT_IRR/=0) THEN
-      PSEFOLD(:,NVT_IRR )= 90.* XDAY
-    ENDIF
-    !
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PSEFOLD(:,NVT_C3  )= 60.* XDAY
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PSEFOLD(:,NVT_C3W )= 60.* XDAY
-      PSEFOLD(:,NVT_C3S )= 60.* XDAY
-    ENDIF
-    !
-    PSEFOLD(:,NVT_C4  )= 60.* XDAY
-    IF (NVT_IRR/=0) THEN
-      PSEFOLD(:,NVT_IRR )= 60.* XDAY
-    ENDIF
-    !
-  ENDIF  
+  PSEFOLD(:,NVT_C4  )= 60.* XDAY
+  IF (NVT_IRR/=0) THEN
+     PSEFOLD(:,NVT_IRR )= 60.* XDAY
+  ENDIF
   !  
 ENDIF    
 !
@@ -873,33 +705,15 @@ IF (PRESENT(PCE_NITRO)) THEN
   IF (NVT_FLTR>0) THEN
      PCE_NITRO(:,NVT_FLTR) = 4.83
   ENDIF
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PCE_NITRO(:,NVT_C3  )= 5.56
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PCE_NITRO(:,NVT_C3W )= 5.56
-      PCE_NITRO(:,NVT_C3S )= 5.56
-    ENDIF
-    PCE_NITRO(:,NVT_C4  )= 5.56
-    IF (NVT_IRR/=0) THEN
-      PCE_NITRO(:,NVT_IRR )= 5.56
-    ENDIF
-    !
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PCE_NITRO(:,NVT_C3  )= 3.79
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PCE_NITRO(:,NVT_C3W )= 3.79
-      PCE_NITRO(:,NVT_C3S )= 3.79
-    ENDIF
-    PCE_NITRO(:,NVT_C4  )= 7.68
-    IF (NVT_IRR/=0) THEN
-      PCE_NITRO(:,NVT_IRR )= 7.68
-    ENDIF
-    !
+  IF (NVT_C3/=0) THEN
+     PCE_NITRO(:,NVT_C3  )= 3.79
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PCE_NITRO(:,NVT_C3W )= 3.79
+     PCE_NITRO(:,NVT_C3S )= 3.79
+  ENDIF
+  PCE_NITRO(:,NVT_C4  )= 7.68
+  IF (NVT_IRR/=0) THEN
+     PCE_NITRO(:,NVT_IRR )= 7.68
   ENDIF
   !
   PCE_NITRO(:,NVT_GRAS)= 5.56
@@ -933,38 +747,20 @@ IF (PRESENT(PCF_NITRO)) THEN
   PCF_NITRO(:,NVT_BONE)= -0.87
   PCF_NITRO(:,NVT_TENE)= -0.87
   PCF_NITRO(:,NVT_BOND)= 0.68
-  PCF_NITRO(:,NVT_TRBE)= 0.12 ! obtained using f = SLA - e*Nm 
-                                                                 ! with SLA = 8.33 m2/kg_DM (Domingues 2011), Nm=1.7% (TRY)
+  PCF_NITRO(:,NVT_TRBE)= 0.12 ! obtained using f = SLA - e*Nm with SLA = 8.33 m2/kg_DM (Domingues 2011), Nm=1.7% (TRY)
+  !
   IF (NVT_FLTR>0) THEN
      PCF_NITRO(:,NVT_FLTR) = 5.11
   ENDIF
-  !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PCF_NITRO(:,NVT_C3  )= 6.73
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PCF_NITRO(:,NVT_C3W )= 6.73
-      PCF_NITRO(:,NVT_C3S )= 6.73
-    ENDIF
-    PCF_NITRO(:,NVT_C4  )= 6.73
-    IF (NVT_IRR/=0) THEN
-      PCF_NITRO(:,NVT_IRR )= 6.73
-    ENDIF
-    !
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PCF_NITRO(:,NVT_C3  )= 9.84
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PCF_NITRO(:,NVT_C3W )= 9.84
-      PCF_NITRO(:,NVT_C3S )= 9.84
-    ENDIF
-    PCF_NITRO(:,NVT_C4  )= -4.33
-    IF (NVT_IRR/=0) THEN
-      PCF_NITRO(:,NVT_IRR )= -4.33
-    ENDIF
-    !
+  IF (NVT_C3/=0) THEN
+     PCF_NITRO(:,NVT_C3  )= 9.84
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PCF_NITRO(:,NVT_C3W )= 9.84
+     PCF_NITRO(:,NVT_C3S )= 9.84
+  ENDIF
+  PCF_NITRO(:,NVT_C4  )= -4.33
+  IF (NVT_IRR/=0) THEN
+     PCF_NITRO(:,NVT_IRR )= -4.33
   ENDIF
   !
   PCF_NITRO(:,NVT_GRAS)= 6.73
@@ -996,20 +792,14 @@ IF (PRESENT(PCNA_NITRO)) THEN
   PCNA_NITRO(:,NVT_TENE)= 1.21
   PCNA_NITRO(:,NVT_BOND)= 1.94
   PCNA_NITRO(:,NVT_TRBE)= 1.7 
+  !
   IF (NVT_FLTR>0) THEN
      PCNA_NITRO(:,NVT_FLTR) = 2.13
   ENDIF
   !
-  IF(GAGRI_TO_GRASS)THEN
-    PCNA_NITRO(:,NVT_C4  )= 1.3
-    IF (NVT_IRR/=0) THEN
-      PCNA_NITRO(:,NVT_IRR) = 1.3
-    ENDIF
-  ELSE
-    PCNA_NITRO(:,NVT_C4  )= 1.9
-    IF (NVT_IRR/=0) THEN
-      PCNA_NITRO(:,NVT_IRR) = 1.9
-    ENDIF
+  PCNA_NITRO(:,NVT_C4  )= 1.9
+  IF (NVT_IRR/=0) THEN
+     PCNA_NITRO(:,NVT_IRR) = 1.9
   ENDIF
   !
   IF (NVT_C3/=0) THEN
@@ -1045,32 +835,15 @@ IF (PRESENT(PROOT_EXTINCTION)) THEN
      PROOT_EXTINCTION(:,NVT_FLTR) = 0.966
   ENDIF
   !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PROOT_EXTINCTION(:,NVT_C3  )= 0.943
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PROOT_EXTINCTION(:,NVT_C3W )= 0.943
-      PROOT_EXTINCTION(:,NVT_C3S )= 0.943
-    ENDIF
-    PROOT_EXTINCTION(:,NVT_C4  )= 0.943
-    IF (NVT_IRR/=0) THEN
-      PROOT_EXTINCTION(:,NVT_IRR )= 0.943
-    ENDIF  
-    !        
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PROOT_EXTINCTION(:,NVT_C3  )= 0.961
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PROOT_EXTINCTION(:,NVT_C3W )= 0.961
-      PROOT_EXTINCTION(:,NVT_C3S )= 0.961
-    ENDIF
-    PROOT_EXTINCTION(:,NVT_C4  )= 0.972
-    IF (NVT_IRR/=0) THEN
-      PROOT_EXTINCTION(:,NVT_IRR )= 0.972
-    ENDIF
-    !
+  IF (NVT_C3/=0) THEN
+     PROOT_EXTINCTION(:,NVT_C3  )= 0.961
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PROOT_EXTINCTION(:,NVT_C3W )= 0.961
+     PROOT_EXTINCTION(:,NVT_C3S )= 0.961
+  ENDIF
+  PROOT_EXTINCTION(:,NVT_C4  )= 0.972
+  IF (NVT_IRR/=0) THEN
+     PROOT_EXTINCTION(:,NVT_IRR )= 0.972
   ENDIF
   !
   PROOT_EXTINCTION(:,NVT_BOGR)= 0.914      
@@ -1106,32 +879,15 @@ IF (PRESENT(PSOILRC_SO2)) THEN
      PSOILRC_SO2(:,NVT_FLTR) = 500.
   ENDIF  
   ! 
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PSOILRC_SO2(:,NVT_C3  )= 350.
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PSOILRC_SO2(:,NVT_C3W )= 350.
-      PSOILRC_SO2(:,NVT_C3S )= 350.
-    ENDIF
-    PSOILRC_SO2(:,NVT_C4  )= 350.
-    IF (NVT_IRR/=0) THEN
-      PSOILRC_SO2(:,NVT_IRR )= 350.
-    ENDIF
-    !
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PSOILRC_SO2(:,NVT_C3  )= 150.
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PSOILRC_SO2(:,NVT_C3W )= 150.
-      PSOILRC_SO2(:,NVT_C3S )= 150.
-    ENDIF
-    PSOILRC_SO2(:,NVT_C4  )= 150.
-    IF (NVT_IRR/=0) THEN
-      PSOILRC_SO2(:,NVT_IRR )= 0.001
-    ENDIF
-    !
+  IF (NVT_C3/=0) THEN
+     PSOILRC_SO2(:,NVT_C3  )= 150.
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PSOILRC_SO2(:,NVT_C3W )= 150.
+     PSOILRC_SO2(:,NVT_C3S )= 150.
+  ENDIF
+  PSOILRC_SO2(:,NVT_C4  )= 150.
+  IF (NVT_IRR/=0) THEN
+     PSOILRC_SO2(:,NVT_IRR )= 0.001
   ENDIF
   !
   PSOILRC_SO2(:,NVT_GRAS)= 350.
@@ -1169,32 +925,15 @@ IF (PRESENT(PSOILRC_O3)) THEN
      PSOILRC_O3(:,NVT_FLTR) = 200.
   ENDIF 
   !
-  IF(GAGRI_TO_GRASS)THEN
-    !
-    IF (NVT_C3/=0) THEN
-      PSOILRC_O3(:,NVT_C3  )= 200.
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PSOILRC_O3(:,NVT_C3W )= 200.
-      PSOILRC_O3(:,NVT_C3S )= 200.
-    ENDIF
-    PSOILRC_O3(:,NVT_C4  )= 200.
-    IF (NVT_IRR/=0) THEN
-      PSOILRC_O3(:,NVT_IRR )= 200.  
-    ENDIF  
-    !        
-  ELSE
-    !
-    IF (NVT_C3/=0) THEN
-      PSOILRC_O3(:,NVT_C3  )= 150.
-    ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
-      PSOILRC_O3(:,NVT_C3W )= 150.
-      PSOILRC_O3(:,NVT_C3S )= 150.
-    ENDIF
-    PSOILRC_O3(:,NVT_C4  )= 150.
-    IF (NVT_IRR/=0) THEN
-      PSOILRC_O3(:,NVT_IRR )=1000.
-    ENDIF
-    !
+  IF (NVT_C3/=0) THEN
+     PSOILRC_O3(:,NVT_C3  )= 150.
+  ELSEIF (NVT_C3W/=0 .AND. NVT_C3S/=0) THEN
+     PSOILRC_O3(:,NVT_C3W )= 150.
+     PSOILRC_O3(:,NVT_C3S )= 150.
+  ENDIF
+  PSOILRC_O3(:,NVT_C4  )= 150.
+  IF (NVT_IRR/=0) THEN
+     PSOILRC_O3(:,NVT_IRR )=1000.
   ENDIF
   !
   PSOILRC_O3(:,NVT_GRAS)= 200.
@@ -1218,7 +957,7 @@ ENDIF
 IF (PRESENT(PVEG_OUT) .AND. PRESENT(PLAI)) THEN
   DO JM=1,SIZE(PVEG_OUT,2)
     DO JC = 1,SIZE(PVEG_OUT,1)
-      PVEG_OUT(JC,JM,:) = VEG_FROM_LAI(PLAI(JC,JM,:),GAGRI_TO_GRASS)        
+      PVEG_OUT(JC,JM,:) = VEG_FROM_LAI(PLAI(JC,JM,:))        
     ENDDO 
   ENDDO
 ELSEIF (PRESENT(PVEG_OUT) .AND. .NOT. PRESENT(PLAI)) THEN
@@ -1229,7 +968,7 @@ ENDIF
 IF (PRESENT(PGREEN) .AND. PRESENT(PLAI)) THEN
   DO JM=1,SIZE(PGREEN,2)
     DO JC = 1,SIZE(PGREEN,1)
-      PGREEN(JC,JM,:) = GREEN_FROM_LAI(PLAI(JC,JM,:),GAGRI_TO_GRASS)  
+      PGREEN(JC,JM,:) = GREEN_FROM_LAI(PLAI(JC,JM,:))  
     ENDDO
   ENDDO
 ELSEIF (PRESENT(PGREEN) .AND. .NOT. PRESENT(PLAI)) THEN
@@ -1241,7 +980,7 @@ ENDIF
 IF (PRESENT(PZ0) .AND. PRESENT(PLAI) .AND. PRESENT(PH_TREE)) THEN
   DO JM=1,SIZE(PZ0,2)
     DO JC = 1,SIZE(PZ0,1)
-      PZ0(JC,JM,:) = Z0V_FROM_LAI(PLAI(JC,JM,:),PH_TREE(JC,:),GAGRI_TO_GRASS)  
+      PZ0(JC,JM,:) = Z0V_FROM_LAI(PLAI(JC,JM,:),PH_TREE(JC,:))
     ENDDO
   ENDDO
 ELSEIF (PRESENT(PZ0) .AND. (.NOT. PRESENT(PLAI) .OR. .NOT. PRESENT(PH_TREE))) THEN
@@ -1276,7 +1015,7 @@ ENDIF
 IF (PRESENT(PH_VEG) .AND. PRESENT(PLAI) .AND. PRESENT(PH_TREE)) THEN
   DO JM=1,SIZE(PH_VEG,2)
     DO JC = 1,SIZE(PH_VEG,1)
-      PH_VEG(JC,JM,:) = VEG_HEIGHT_FROM_LAI(PLAI(JC,JM,:),PH_TREE(JC,:),GAGRI_TO_GRASS )  
+      PH_VEG(JC,JM,:) = VEG_HEIGHT_FROM_LAI(PLAI(JC,JM,:),PH_TREE(JC,:))  
     ENDDO
   ENDDO
 ELSEIF (PRESENT(PH_VEG) .AND. (.NOT. PRESENT(PLAI) .OR. .NOT. PRESENT(PH_TREE))) THEN

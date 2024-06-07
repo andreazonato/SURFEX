@@ -45,7 +45,7 @@ USE MODD_DIAG_n, ONLY : DIAG_t, DIAG_OPTIONS_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 USE MODD_CH_WATFLUX_n, ONLY : CH_WATFLUX_t
 !
-USE MODD_SURF_PAR,      ONLY : XUNDEF
+USE MODD_SURF_PAR,      ONLY : XUNDEF, LEN_HREC
 !
 USE MODD_XIOS, ONLY : LALLOW_ADD_DIM, YSWBAND_DIM_NAME
 !
@@ -84,7 +84,7 @@ TYPE(DIAG_t), INTENT(INOUT) :: DC
 !              -------------------------------
 !
 INTEGER           :: IRESP          ! IRESP  : return-code if a problem appears
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be written
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be written
  CHARACTER(LEN=100):: YCOMMENT       ! Comment string
  CHARACTER(LEN=2)  :: YNUM
 !

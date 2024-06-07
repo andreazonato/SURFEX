@@ -52,8 +52,7 @@ USE MODI_PREP_RESTART_COUPL_TOPD
 !
 USE MODD_TOPODYN,       ONLY : XQTOT, NNB_TOPD_STEP, XQB_RUN, XQB_DR
 USE MODD_COUPLING_TOPD, ONLY : LCOUPL_TOPD, LBUDGET_TOPD, NNB_TOPD, LTOPD_STEP, NTOPD_STEP, &
-                                 NYEAR,NMONTH,NDAY,NH,NM
-!
+                               NYEAR, NMONTH, NDAY, NH, NM, LSUBCAT
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -83,12 +82,10 @@ INTEGER,          INTENT(IN)         :: KI       ! Surfex grid dimension
 !
 !*      0.2    declarations of local variables
 !
- CHARACTER(LEN=3)              :: YSTEP    ! time stepsurf_tmp/off
+ CHARACTER(LEN=5)              :: YSTEP    ! time stepsurf_tmp/off
 INTEGER                       :: ILUOUT   ! unit of output listing file
 INTEGER                       :: JJ       ! loop control
 !
-REAL, DIMENSION(KI)           :: ZDG_FULL
-REAL, DIMENSION(KI)           :: ZWG2_FULL,ZWG3_FULL,ZDG2_FULL,ZDG3_FULL
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !-------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('COUPLING_SURF_TOPD',0,ZHOOK_HANDLE)
@@ -108,21 +105,30 @@ IF ( LTOPD_STEP ) THEN
     WRITE(YSTEP,'(I1)') NTOPD_STEP
   ELSEIF (NTOPD_STEP < 100) THEN
     WRITE(YSTEP,'(I2)') NTOPD_STEP
-  ELSE
+  ELSEIF (NTOPD_STEP < 1000) THEN
     WRITE(YSTEP,'(I3)') NTOPD_STEP
+  ELSEIF (NTOPD_STEP < 10000) THEN
+    WRITE(YSTEP,'(I4)') NTOPD_STEP
+  ELSE
+    WRITE(YSTEP,'(I5)') NTOPD_STEP
   ENDIF
   !
   write(ILUOUT,*) 'pas de temps coupl ',YSTEP
+  write(*,*) 'pas de temps coupl ',YSTEP
+  IF (LBUDGET_TOPD.AND.NTOPD_STEP>1) CALL BUDGET_COUPL_ROUT(DE, DEC, DC, DMI, IO, NP, NPE, U, U%NDIM_FULL, NTOPD_STEP)
   !
   IF (IO%CRUNOFF=='TOPD') THEN
-    CALL COUPL_TOPD(DEC, DC, DMI, G%XMESH_SIZE, IO, S, K, NK, NP, NPE, &
-                    UG, U, HPROGRAM, YSTEP, KI, NTOPD_STEP)
+    IF (LSUBCAT) THEN
+      CALL COUPL_TOPD_SUB(DEC, DC, DMI, G%XMESH_SIZE, IO, S, K, NK, NP, NPE, &
+                        UG, U, HPROGRAM,YSTEP,U%NDIM_FULL,NTOPD_STEP)
+    ELSE      
+      CALL COUPL_TOPD(DEC, DC, DMI, G%XMESH_SIZE, IO, S, K, NK, NP, NPE, &
+                    UG, U, HPROGRAM, YSTEP, U%NDIM_FULL, NTOPD_STEP)
+    ENDIF
   ELSE
     CALL ROUT_DATA_ISBA(DEC, DC, DMI, G%XMESH_SIZE, IO, NP, NPE,  &
-                        UG, U, HPROGRAM, KI, NTOPD_STEP)
+                        UG, U, HPROGRAM, U%NDIM_FULL, NTOPD_STEP)      
   ENDIF
-  !
-  IF (LBUDGET_TOPD) CALL BUDGET_COUPL_ROUT(DE, DEC, DC, DMI, IO, NP, NPE, U, KI, NTOPD_STEP)
   !
 ENDIF! (LCOUPL_TOPD.AND......
 !

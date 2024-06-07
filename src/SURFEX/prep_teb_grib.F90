@@ -34,9 +34,8 @@ USE MODE_READ_GRIB
 USE MODI_INTERP_GRID
 !
 USE MODD_GRID_GRIB,  ONLY : CGRIB_FILE, NNI, CINMODEL
-USE MODD_PREP_TEB,   ONLY : XGRID_ROAD, XGRID_WALL, XGRID_ROOF, XGRID_FLOOR, &
-                            XTI_BLD, XTI_ROAD, XHUI_BLD, XTI_BLD_DEF,        &
-                            XHUI_BLD_DEF
+USE MODD_PREP_TEB,   ONLY : XGRID_ROAD, XGRID_WALL, XGRID_ROOF, &
+                            XTI_BLD, XTDEEP_TEB, XTI_BLD_DEF
 USE MODD_SURF_PAR,   ONLY : XUNDEF
 !
 !
@@ -74,7 +73,7 @@ IF (TRIM(HFILE).NE.CGRIB_FILE) CGRIB_FILE=""
  CALL READ_GRIB_LAND_MASK(HFILE,KLUOUT,CINMODEL,ZMASK)
 !
 IF (HSURF=='T_FLOOR' .OR. HSURF(1:6)=='T_WALL' .OR. HSURF=='T_ROOF' .OR.  &
-    HSURF=='T_WIN2' .OR. HSURF=='TI_BLD' .OR. HSURF=='T_MASS') THEN
+    HSURF=='T_WIN2' .OR. HSURF=='TI_BLD' .OR. HSURF=='T_MASS' .OR. HSURF=='T_BLD  ') THEN
   ZTI_BLD = XTI_BLD_DEF
   IF (XTI_BLD/=XUNDEF) ZTI_BLD=XTI_BLD
 ENDIF
@@ -88,7 +87,7 @@ SELECT CASE(HSURF)
 !
   CASE('ZS     ')
     SELECT CASE (CINMODEL)
-      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM')
+      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM','NCEP  ')
         CALL READ_GRIB_ZS_LAND(HFILE,KLUOUT,CINMODEL,ZMASK,ZFIELD1D)
         ALLOCATE(PFIELD(SIZE(ZFIELD1D),1))
         PFIELD(:,1) = ZFIELD1D(:)
@@ -106,28 +105,30 @@ SELECT CASE(HSURF)
        CASE('ARPEGE','ALADIN','MOCAGE')
          CALL READ_GRIB_TG_METEO_FRANCE(HFILE,KLUOUT,CINMODEL,ZMASK,ZFIELD,ZD)
        CASE('HIRLAM')
-         CALL READ_GRIB_TG_HIRLAM(HFILE,KLUOUT,CINMODEL,ZMASK,ZFIELD,ZD)           
+         CALL READ_GRIB_TG_HIRLAM(HFILE,KLUOUT,CINMODEL,ZMASK,ZFIELD,ZD) 
+       CASE('NCEP  ')
+         CALL READ_GRIB_TG_NCEP(HFILE,KLUOUT,CINMODEL,ZMASK,ZFIELD,ZD)          
      END SELECT
      !* if deep road temperature is prescribed
-     IF (XTI_ROAD/=XUNDEF) THEN
-       ZFIELD(:,2:) = XTI_ROAD 
+     IF (XTDEEP_TEB/=XUNDEF) THEN
+       ZFIELD(:,2:) = XTDEEP_TEB 
      END IF
      CALL TEB_PROFILE_GRIB(XGRID_ROAD)
 !
-!*      3.bis  Profile of temperatures in floors
+!*      3.bis  Profile of temperatures below floors
 !              --------------------------------
 
-  CASE('T_FLOOR')    
+  CASE('T_BLD  ')    
      !* reading of the profile and its depth definition
      SELECT CASE(CINMODEL)
-       CASE('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM')
+       CASE('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM','NCEP  ')
          CALL READ_GRIB_TF_TEB(HFILE,KLUOUT,CINMODEL,ZTI_BLD,ZMASK,ZFIELD,ZD)
      END SELECT
      !* if deep road temperature is prescribed
-     IF (XTI_ROAD/=XUNDEF) THEN
-       ZFIELD(:,2:) = XTI_ROAD 
+     IF (XTDEEP_TEB/=XUNDEF) THEN
+       ZFIELD(:,2:) = XTDEEP_TEB 
      END IF
-     CALL TEB_PROFILE_GRIB(XGRID_FLOOR)
+     CALL TEB_PROFILE_GRIB(XGRID_ROAD)
 !
 !*      4.     Profile of temperatures in walls
 !              --------------------------------
@@ -138,7 +139,7 @@ SELECT CASE(HSURF)
 
   CASE('T_WIN1')
     SELECT CASE (CINMODEL)
-      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM')
+      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM','NCEP  ')
         CALL READ_GRIB_TS(HFILE,KLUOUT,CINMODEL,ZMASK,ZFIELD1D)
         ALLOCATE(PFIELD(NNI,1))
         PFIELD(:,1) = ZFIELD1D(:)
@@ -159,12 +160,19 @@ SELECT CASE(HSURF)
      ALLOCATE(PFIELD(NNI,3))
      PFIELD(:,:) = ZTI_BLD
 !
+!*      5.bis    Profile of temperatures in floors
+!              -----------------------------------
+!
+  CASE('T_FLOOR')    
+     ALLOCATE(PFIELD(NNI,3))
+     PFIELD(:,:) = ZTI_BLD
+!
 !*      6.     Canyon air temperature
 !              ----------------------
 !
   CASE('T_CAN  ')
     SELECT CASE (CINMODEL)
-      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM')
+      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM','NCEP  ')
         CALL READ_GRIB_T2_LAND(HFILE,KLUOUT,CINMODEL,ZMASK,ZFIELD1D)
         ALLOCATE(PFIELD(SIZE(ZFIELD1D),1))
         PFIELD(:,1) = ZFIELD1D(:)
@@ -176,7 +184,7 @@ SELECT CASE(HSURF)
 !
   CASE('Q_CAN  ')
     SELECT CASE (CINMODEL)
-      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM')
+      CASE ('ECMWF ','ARPEGE','ALADIN','MOCAGE','HIRLAM','NCEP  ')
         ALLOCATE(PFIELD(NNI,1))
         PFIELD(:,1) = 0.01
     END SELECT
@@ -185,15 +193,15 @@ SELECT CASE(HSURF)
 !*      9.     Deep road temperature
 !              ---------------------
 
-  CASE('TI_ROAD')    
-     IF (XTI_ROAD==XUNDEF) THEN
+  CASE('TDEEP_T')    
+     IF (XTDEEP_TEB==XUNDEF) THEN
        CALL READ_GRIB_T2_LAND(HFILE,KLUOUT,CINMODEL,ZMASK,ZFIELD1D)
        ALLOCATE(PFIELD(SIZE(ZFIELD1D),1))
        PFIELD(:,1) = ZFIELD1D(:)
        DEALLOCATE(ZFIELD1D)
      ELSE
        ALLOCATE(PFIELD(NNI,1))
-       PFIELD = XTI_ROAD
+       PFIELD = XTDEEP_TEB
      END IF
 
 
@@ -214,7 +222,21 @@ SELECT CASE(HSURF)
 
 !*     10.     Other quantities (water reservoirs)
 !              ----------------
-
+!
+! Robert:  These values are hardcoded at the moment
+!
+  CASE('PSOLD')    
+     ALLOCATE(PFIELD(NNI,1))
+     PFIELD = 101325.0
+!
+  CASE('VENTNIG')    
+     ALLOCATE(PFIELD(NNI,1))
+     PFIELD = 0.0
+!
+  CASE('SHADVAC')    
+     ALLOCATE(PFIELD(NNI,1))
+     PFIELD = 0.0
+!
   CASE DEFAULT
     ALLOCATE(PFIELD(NNI,1))
     PFIELD = 0.

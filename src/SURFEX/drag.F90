@@ -3,12 +3,12 @@
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 !     #########
-    SUBROUTINE DRAG(HISBA, HSNOW_ISBA, HCPSURF, PTSTEP, PTG, PWG, PWGI,  &
-                    PEXNS, PEXNA, PTA, PVMOD, PQA, PRR, PSR, PPS, PRS,   &
-                    PVEG, PZ0, PZ0EFF, PZ0H, PWFC, PWSAT, PPSNG, PPSNV,  &
-                    PZREF, PUREF, PDIRCOSZW, PDELTA, PF5, PRA, PCH, PCD, &
-                    PCDN, PRI, PHUG, PHUGI, PHV, PHU, PCPS, PQS, PFFG,   &
-                    PFFV, PFF, PFFG_NOSNOW, PFFV_NOSNOW, PLEG_DELTA,     &
+    SUBROUTINE DRAG(HISBA, HSNOW_ISBA, HCPSURF, PTSTEP, PTG, PWG, PWGI,      &
+                    PEXNS, PEXNA, PTA, PVMOD, PQA, PRR, PSR, PPS, PRS,       &
+                    PVEG, PZ0, PZ0EFF, PZ0H, PWFC, PWSAT, PPSNG, PPSNV,      &
+                    PZREF, PUREF, PDIRCOSZW, PDELTA, PF5, AT, PRA, PCH, PCD, &
+                    PCDN, PRI, PHUG, PHUGI, PHV, PHU, PCPS, PQS, PFFG,       &
+                    PFFV, PFF, PFFG_NOSNOW, PFFV_NOSNOW, PLEG_DELTA,         &
                     PLEGI_DELTA, PWR, PRHOA, PLVTT, PQSAT  )  
 !   ############################################################################
 !
@@ -83,6 +83,7 @@ USE MODD_CSTS,     ONLY : XPI, XCPD, XCPV
 USE MODD_ISBA_PAR, ONLY : XWGMIN, XRS_MAX
 USE MODD_SURF_ATM, ONLY : LDRAG_COEF_ARP, LRRGUST_ARP, XRRSCALE,   &
                             XRRGAMMA, XUTILGUST, LCPL_ARP  
+USE MODD_SURF_ATM_TURB_n, ONLY : SURF_ATM_TURB_t
 !
 USE MODI_SURFACE_RI
 USE MODI_SURFACE_AERO_COND
@@ -169,6 +170,8 @@ REAL, DIMENSION(:), INTENT(OUT)  :: PCH, PCD, PCDN, PRI
 !                                     PCD = drag coefficient for momentum
 !                                     PCDN= neutral drag coefficient for momentum
 !                                     PRI = Richardson number
+!
+TYPE(SURF_ATM_TURB_t), INTENT(IN) :: AT ! atmospheric turbulence parameters
 !
 REAL, DIMENSION(:), INTENT(OUT)  :: PHUG, PHUGI, PHV, PHU, PQS, PLEG_DELTA, PLEGI_DELTA
 !                                     PHUG  = ground relative humidity
@@ -364,7 +367,7 @@ CALL SURFACE_RI(PTG, PQS, PEXNS, PEXNA, PTA, PQA,                    &
 IF (LDRAG_COEF_ARP) THEN
 
    CALL SURFACE_CDCH_1DARP(PZREF, PZ0EFF, PZ0H, ZVMOD, PTA, PTG, &
-                             PQA, PQS, PCD, PCDN, PCH              )  
+                             PQA, PQS, AT, PCD, PCDN, PCH,PRI )
    PRA(:) = 1. / ( PCH(:) * ZVMOD(:) )
 
 ELSE

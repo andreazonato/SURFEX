@@ -34,7 +34,6 @@ SUBROUTINE SFX_XIOS_READNAM_OL(HNAMELIST)
 !              ------------
 !
 USE MODI_ABOR1_SFX
-USE MODI_GET_LUOUT
 
 USE MODN_IO_OFFLINE
 
@@ -58,18 +57,19 @@ CHARACTER(LEN=28), INTENT(IN )           :: HNAMELIST
 !              -------------------------------
 !
 INTEGER            :: ILUNAM
-INTEGER            :: ILUOUT
 LOGICAL            :: GFOUND
+LOGICAL            :: GSAVHOOK
 !
 ! For now, some issued if DrHook is called before Oasis setup, hence :
+GSAVHOOK=LHOOK
+LHOOK=.FALSE.
 !
 LXIOS           = .FALSE.
 LXIOS_DEF_CLOSED= .FALSE.
 !
 CALL OPEN_NAMELIST('ASCII ',ILUNAM,HNAMELIST)
 !
-CALL GET_LUOUT('OFFLINE',ILUOUT)
-CALL POSNAM(ILUNAM,'NAM_IO_OFFLINE',GFOUND,ILUOUT)
+CALL POSNAM(ILUNAM,'NAM_IO_OFFLINE',GFOUND)
 IF (GFOUND) THEN  
    READ (UNIT=ILUNAM,NML=NAM_IO_OFFLINE)
 ELSE
@@ -88,6 +88,7 @@ IF (LXIOS) THEN
 !
 ENDIF
 !
+LHOOK=GSAVHOOK
 !-------------------------------------------------------------------------------
 !
 END SUBROUTINE SFX_XIOS_READNAM_OL

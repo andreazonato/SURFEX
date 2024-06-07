@@ -21,7 +21,7 @@ USE MODI_CLOSE_AUX_IO_SURF
 USE MODI_ABOR1_SFX
 USE MODI_GET_LUOUT
 !
-USE MODD_SURF_PAR, ONLY : XUNDEF
+USE MODD_SURF_PAR, ONLY : XUNDEF, LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -45,7 +45,7 @@ REAL,DIMENSION(:,:), POINTER    :: PFIELD    ! field to interpolate horizontally
 !
 !
 REAL, DIMENSION(:), ALLOCATABLE :: ZMASK
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
 INTEGER           :: IRESP          ! reading return code
 INTEGER           :: ILUOUT
 INTEGER           :: IDIM_WATER

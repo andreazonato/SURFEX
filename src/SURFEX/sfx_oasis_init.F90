@@ -48,13 +48,14 @@ SUBROUTINE SFX_OASIS_INIT(HNAMELIST,KLOCAL_COMM,HINIT)
 !!     Original    10/2013
 !!     S.Sénési    08/2015 - handle XIOS
 !!     B.Decharme  09/2016 - no CALL ABORT if no namelist in Arpege
+!!     Modified    11/2014 : J. Pianezze - add LOASIS_GRID flag
 !!
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
 !              ------------
 !
-USE MODD_SFX_OASIS, ONLY : LOASIS, CMODEL_NAME, XRUNTIME
+USE MODD_SFX_OASIS, ONLY : LOASIS, LOASIS_GRID, CMODEL_NAME, XRUNTIME
 USE MODI_ABOR1_SFX
 !
 USE MODD_XIOS , ONLY : LXIOS ! Should we call XIOS_INITIALIZE instead of OASIS_GET_LOCAL_COMM
@@ -95,7 +96,7 @@ LOGICAL            :: GFOUND
 !*       0.3   Declarations of namelist variables
 !              ----------------------------------
 !
-NAMELIST/NAM_OASIS/LOASIS,CMODEL_NAME
+NAMELIST/NAM_OASIS/LOASIS,LOASIS_GRID,CMODEL_NAME
 !
 !-------------------------------------------------------------------------------
 !
@@ -105,6 +106,7 @@ NAMELIST/NAM_OASIS/LOASIS,CMODEL_NAME
 !               ---------------
 !
 LOASIS      = .FALSE.
+LOASIS_GRID = .FALSE.
  CMODEL_NAME = 'surfex'
 XRUNTIME    = 0.0
 !
@@ -164,7 +166,7 @@ IF (LXIOS) THEN
 ELSE  ! (i.e. .NOT. LXIOS)
 !
 #ifdef CPLOASIS
-
+!
   IF (LOASIS ) THEN
     IRANK=0
     CALL OASIS_INIT_COMP(ICOMP_ID,CMODEL_NAME,IERR)  
@@ -187,15 +189,17 @@ ELSE  ! (i.e. .NOT. LXIOS)
     ENDIF
 !
   ELSE
+!
     KLOCAL_COMM=0
     RETURN
+!
   ENDIF
-
+!
 #else
-
+!
   KLOCAL_COMM=0
   RETURN
-
+!
 #endif
 !
 ENDIF
@@ -213,7 +217,7 @@ ENDIF
 IF(YINIT=='PRE')THEN
    RETURN
 ENDIF
-
+!
 #ifdef CPLOASIS
 IF (LOASIS) THEN
 !

@@ -34,6 +34,7 @@ CONTAINS
 !!****  * - routine to write a real scalar
 !
 USE MODI_ERROR_WRITE_SURF_TXT
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -42,7 +43,7 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),  INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN) :: HREC     ! name of the article to be read
 REAL,               INTENT(IN) :: PFIELD   ! the real scalar to be read
 INTEGER,            INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100), INTENT(IN) :: HCOMMENT ! comment string
@@ -72,6 +73,7 @@ END SUBROUTINE WRITE_SURFX0_TXT
 !!****  * - routine to write an integer
 !
 USE MODI_ERROR_WRITE_SURF_TXT
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -80,7 +82,7 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),  INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN) :: HREC     ! name of the article to be read
 INTEGER,            INTENT(IN) :: KFIELD   ! the integer to be read
 INTEGER,            INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100), INTENT(IN) :: HCOMMENT ! comment string
@@ -109,6 +111,9 @@ END SUBROUTINE WRITE_SURFN0_TXT
 !
 !!****  * - routine to write a character
 !
+USE MODD_DATA_COVER_PAR,     ONLY : NCAR_FILES
+USE MODD_SURF_PAR, ONLY : LEN_HREC
+!
 USE MODI_ERROR_WRITE_SURF_TXT
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
@@ -118,11 +123,11 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),  INTENT(IN)  :: HREC      ! name of the article to be read
- CHARACTER(LEN=40),  INTENT(IN)  :: HFIELD    ! the integer to be read
-INTEGER,            INTENT(OUT) :: KRESP     ! KRESP  : return-code if a problem appears
- CHARACTER(LEN=100), INTENT(IN)  :: HCOMMENT  ! comment string
-REAL(KIND=JPRB) :: ZHOOK_HANDLE
+ CHARACTER(LEN=LEN_HREC),         INTENT(IN)  :: HREC      ! name of the article to be read
+ CHARACTER(LEN=NCAR_FILES), INTENT(IN)  :: HFIELD    ! the integer to be read
+INTEGER,                    INTENT(OUT) :: KRESP     ! KRESP  : return-code if a problem appears
+ CHARACTER(LEN=100),        INTENT(IN)  :: HCOMMENT  ! comment string
+REAL(KIND=JPRB)                         :: ZHOOK_HANDLE
 !
 IF (LHOOK) CALL DR_HOOK('MODE_WRITE_SURF_TXT:WRITE_SURFC0_TXT',0,ZHOOK_HANDLE)
 !
@@ -148,6 +153,7 @@ END SUBROUTINE WRITE_SURFC0_TXT
 !!****  * - routine to write a logical
 !
 USE MODI_ERROR_WRITE_SURF_TXT
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -156,7 +162,7 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),  INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN) :: HREC     ! name of the article to be read
 LOGICAL,            INTENT(IN) :: OFIELD   ! array containing the data field
 INTEGER,            INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100), INTENT(IN) :: HCOMMENT ! comment string
@@ -191,6 +197,7 @@ USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, XTIME_NPIO_WRITE
 !
 USE MODD_IO_SURF_TXT,        ONLY : NMASK, NFULL, CMASK
 USE MODD_WRITE_TXT,          ONLY : CVAR, NVAR, NIND
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_ERROR_WRITE_SURF_TXT
 USE MODI_GATHER_AND_WRITE_MPI
@@ -209,7 +216,7 @@ INCLUDE "mpif.h"
 !
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
 !
- CHARACTER(LEN=12),   INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),   INTENT(IN) :: HREC     ! name of the article to be read
 REAL, DIMENSION(:),  INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,             INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),  INTENT(IN) :: HCOMMENT ! comment string
@@ -245,8 +252,7 @@ IF (NRANK==NPIO) THEN
   !
   CALL INIT_WRITE_TXT(HSELECT, HREC,LWFL)
   !
-  IF (LWFL) WRITE(NIND,FMT='(50D14.6)',IOSTAT=KRESP) ZWORK(1:ISIZE)
-  !
+  IF (LWFL) WRITE(NIND,FMT='(50D29.17)',IOSTAT=KRESP) ZWORK(1:ISIZE)
   IF (KRESP/=0) CALL ERROR_WRITE_SURF_TXT(HREC,KRESP)
   !
 #ifdef SFX_MPI
@@ -271,6 +277,7 @@ USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, XTIME_NPIO_WRITE
 !
 USE MODD_IO_SURF_TXT,        ONLY : NMASK, NFULL
 USE MODD_WRITE_TXT,          ONLY : CVAR, NVAR, NIND
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_ERROR_WRITE_SURF_TXT
 USE MODI_GATHER_AND_WRITE_MPI
@@ -289,7 +296,7 @@ INCLUDE "mpif.h"
 !
  CHARACTER(LEN=*), DIMENSION(:), INTENT(IN) :: HSELECT
 !
- CHARACTER(LEN=12),        INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),        INTENT(IN) :: HREC     ! name of the article to be read
 REAL, DIMENSION(:,:),     INTENT(IN) :: PFIELD   ! array containing the data field
 INTEGER,                  INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),       INTENT(IN) :: HCOMMENT ! comment string
@@ -325,8 +332,7 @@ IF (NRANK==NPIO) THEN
   !  
   CALL INIT_WRITE_TXT(HSELECT, HREC,LWFL)
   !
-  IF (LWFL) WRITE(NIND,FMT='(50D14.6)',IOSTAT=KRESP) ZWORK(1:ISIZE,:)
-  !
+  IF (LWFL) WRITE(NIND,FMT='(50D29.17)',IOSTAT=KRESP) ZWORK(1:ISIZE,:)
   IF (KRESP/=0) CALL ERROR_WRITE_SURF_TXT(HREC,KRESP)   
   !
 #ifdef SFX_MPI
@@ -346,6 +352,7 @@ END SUBROUTINE WRITE_SURFX2_TXT
 !!****  * - routine to write an integer array
 !
 USE MODI_ERROR_WRITE_SURF_TXT
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -354,7 +361,7 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),      INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),      INTENT(IN) :: HREC     ! name of the article to be read
 INTEGER, DIMENSION(:),  INTENT(IN) :: KFIELD   ! the integer to be read
 INTEGER,                INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),     INTENT(IN) :: HCOMMENT ! comment string
@@ -401,6 +408,7 @@ END SUBROUTINE WRITE_SURFN1_TXT
 !!****  * - routine to write a logical array
 !
 USE MODI_ERROR_WRITE_SURF_TXT
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -409,7 +417,7 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),      INTENT(IN) :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),      INTENT(IN) :: HREC     ! name of the article to be read
 LOGICAL, DIMENSION(:), INTENT(IN) :: OFIELD   ! array containing the data field
 INTEGER,                INTENT(OUT):: KRESP    ! KRESP  : return-code if a problem appears
  CHARACTER(LEN=100),     INTENT(IN) :: HCOMMENT ! comment string
@@ -443,6 +451,7 @@ END SUBROUTINE WRITE_SURFL1_TXT
 !             ------------
 !
 USE MODI_ERROR_WRITE_SURF_TXT
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -451,7 +460,7 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),  INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),  INTENT(IN)  :: HREC     ! name of the article to be read
 INTEGER,            INTENT(IN)  :: KYEAR    ! year
 INTEGER,            INTENT(IN)  :: KMONTH   ! month
 INTEGER,            INTENT(IN)  :: KDAY     ! day
@@ -500,6 +509,7 @@ END SUBROUTINE WRITE_SURFT0_TXT
 !!****  * - routine to write a date
 !
 USE MODI_ERROR_WRITE_SURF_TXT
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -508,7 +518,7 @@ IMPLICIT NONE
 !
 !*      0.1   Declarations of arguments
 !
- CHARACTER(LEN=12),       INTENT(IN)  :: HREC     ! name of the article to be read
+ CHARACTER(LEN=LEN_HREC),       INTENT(IN)  :: HREC     ! name of the article to be read
 INTEGER, DIMENSION(:,:), INTENT(IN)  :: KYEAR    ! year
 INTEGER, DIMENSION(:,:), INTENT(IN)  :: KMONTH   ! month
 INTEGER, DIMENSION(:,:), INTENT(IN)  :: KDAY     ! day

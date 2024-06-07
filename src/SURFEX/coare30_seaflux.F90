@@ -7,7 +7,7 @@
                                 PTA,PEXNA,PRHOA,PSST,PEXNS,PQA,     & 
                                 PRAIN,PSNOW,PVMOD,PZREF,PUREF,PPS,  &
                                 PQSAT,PSFTH,PSFTQ,PUSTAR,           &
-                                PCD,PCDN,PCH,PCE,PRI,PRESA,PZ0HSEA  )
+                                AT, PCD,PCDN,PCH,PCE,PRI,PRESA,PZ0HSEA  )
 !     ##################################################################
 !
 !
@@ -38,7 +38,7 @@
 !!     
 !!    AUTHOR
 !!    ------
-!!     C. Lebeaupin  *MÃ©tÃ©o-France* 
+!!     C. Lebeaupin  *Météo-France* 
 !!
 !!    MODIFICATIONS
 !!    -------------
@@ -46,6 +46,7 @@
 !!      B. Decharme     04/2013 : Pack only input variables
 !!      S. Senesi       01/2014 : When handling sea ice cover, compute open sea flux, 
 !!                                and only where ice cover < 1.
+!!      M.N. Bouin      03/2014 : possibility of wave parameters from external source
 !-------------------------------------------------------------------------------
 !
 !*       0.     DECLARATIONS
@@ -56,6 +57,7 @@
 USE MODD_SEAFLUX_n, ONLY : SEAFLUX_t
 !
 USE MODD_SURF_PAR,   ONLY : XUNDEF
+USE MODD_SURF_ATM_TURB_n, ONLY : SURF_ATM_TURB_t
 !
 USE MODI_ICE_SEA_FLUX
 USE MODI_COARE30_FLUX
@@ -86,6 +88,7 @@ REAL, DIMENSION(:), INTENT(IN)    :: PEXNS ! Exner function at sea surface
 REAL, DIMENSION(:), INTENT(IN)    :: PPS   ! air pressure at sea surface (Pa)
 REAL, DIMENSION(:), INTENT(IN)    :: PRAIN ! precipitation rate (kg/s/m2)
 REAL, DIMENSION(:), INTENT(IN)    :: PSNOW ! snow rate (kg/s/m2)
+TYPE(SURF_ATM_TURB_t), INTENT(IN) :: AT         ! atmospheric turbulence parameters
 !                                                                                 
 !  surface fluxes : latent heat, sensible heat, friction fluxes
 REAL, DIMENSION(:), INTENT(OUT)      :: PSFTH ! heat flux (W/m2)
@@ -172,6 +175,8 @@ REAL, DIMENSION(SIZE(KMASK))      :: ZW_VMOD ! module of wind at atm. wind level
 REAL, DIMENSION(SIZE(KMASK))      :: ZW_ZREF ! atm. level for temp. and humidity (m)
 REAL, DIMENSION(SIZE(KMASK))      :: ZW_UREF ! atm. level for wind (m)
 REAL, DIMENSION(SIZE(KMASK))      :: ZW_SST  ! Sea Surface Temperature (K)
+REAL, DIMENSION(SIZE(KMASK))      :: ZW_HS   ! wave significant height
+REAL, DIMENSION(SIZE(KMASK))      :: ZW_TP   ! wave peak period
 REAL, DIMENSION(SIZE(KMASK))      :: ZW_EXNS ! Exner function at sea surface
 REAL, DIMENSION(SIZE(KMASK))      :: ZW_PS   ! air pressure at sea surface (Pa)
 REAL, DIMENSION(SIZE(KMASK))      :: ZW_RAIN !precipitation rate (kg/s/m2)
@@ -207,6 +212,8 @@ DO JJ=1, SIZE(KMASK)
   ZW_ZREF(JJ) = PZREF(KMASK(JJ)) 
   ZW_UREF(JJ) = PUREF(KMASK(JJ))
   ZW_SST(JJ)  = PSST(KMASK(JJ))
+  ZW_TP(JJ)   = S%XTP(KMASK(JJ))
+  ZW_HS(JJ)   = S%XHS(KMASK(JJ))  
   ZW_EXNS(JJ) = PEXNS(KMASK(JJ)) 
   ZW_PS(JJ)   = PPS(KMASK(JJ))
   ZW_RAIN(JJ) = PRAIN(KMASK(JJ))
@@ -230,12 +237,12 @@ IF (YTYPE=='W') THEN
   !
   CALL COARE30_FLUX(S, ZW_Z0SEA,ZW_TA,ZW_EXNA,ZW_RHOA,ZW_SST,ZW_EXNS,&
         ZW_QA,ZW_VMOD,ZW_ZREF,ZW_UREF,ZW_PS,ZW_QSAT,ZW_SFTH,ZW_SFTQ,ZW_USTAR,&
-        ZW_CD,ZW_CDN,ZW_CH,ZW_CE,ZW_RI,ZW_RESA,ZW_RAIN,ZW_Z0HSEA)   
+        ZW_CD,ZW_CDN,ZW_CH,ZW_CE,ZW_RI,ZW_RESA,ZW_RAIN,ZW_Z0HSEA,ZW_HS,ZW_TP)   
   !
 ELSEIF ( (YTYPE=='I') .AND. (.NOT. S%LHANDLE_SIC)) THEN
   !
   CALL ICE_SEA_FLUX(ZW_Z0SEA,ZW_TA,ZW_EXNA,ZW_RHOA,ZW_SST,ZW_EXNS,ZW_QA,ZW_RAIN,ZW_SNOW,  &
-         ZW_VMOD,ZW_ZREF,ZW_UREF,ZW_PS,ZW_QSAT,ZW_SFTH,ZW_SFTQ,ZW_USTAR,ZW_CD, &
+         ZW_VMOD,ZW_ZREF,ZW_UREF,ZW_PS,ZW_QSAT,ZW_SFTH,ZW_SFTQ,ZW_USTAR,AT, ZW_CD, &
          ZW_CDN,ZW_CH,ZW_RI,ZW_RESA,ZW_Z0HSEA)  
   !
 ENDIF

@@ -1,4 +1,4 @@
-!SFX_LIC Copyright 1994-2014 CNRS, Meteo-France and Universite Paul Sabatier
+!SFX_LIC Copyright 2008-2019 CNRS, Meteo-France and Universite Paul Sabatier
 !SFX_LIC This is part of the SURFEX software governed by the CeCILL-C licence
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
@@ -37,15 +37,21 @@
 !!    -------------
 !!      Original    10/2008
 !!      M. Moge     02/2015 parallelization for mésonh
+!!      J. Pianezze 08/2016 replacement of MPI_COMM_WOLRD by NMNH_COMM_WORLD
+!  P. Wautelet 26/04/2019: use modd_precision parameters for datatypes of MPI communications
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
 !              ------------
 !
-!
-!
+#ifdef MNH_PARALLEL
+use modd_mpif
+use modd_precision,      only: MNHLOG_MPI
+USE MODD_VAR_ll,         ONLY: NMNH_COMM_WORLD
+#endif
 !
 USE MODD_DATA_COVER_PAR, ONLY : JPCOVER
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_READ_SURF
 USE MODI_OLD_NAME
@@ -55,11 +61,6 @@ USE PARKIND1  ,ONLY : JPRB
 !
 IMPLICIT NONE
 !
-#ifdef MNH_PARALLEL
-#ifndef NOMPI
-INCLUDE "mpif.h"
-#endif
-#endif
 !
 !*       0.1   Declarations of arguments
 !              -------------------------
@@ -73,7 +74,8 @@ LOGICAL, DIMENSION(JPCOVER)    :: OCOVER   ! list of covers
 !              -------------------------------
 !
 LOGICAL, DIMENSION(:), ALLOCATABLE :: GCOVER ! cover list in the file
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFMOLD      ! Name of the article to be read
 INTEGER   :: IVERSION       ! version of surfex file being read
 INTEGER   :: IRESP          ! Error code after redding
 #ifdef MNH_PARALLEL
@@ -93,16 +95,15 @@ IF (IVERSION<=3) THEN
 ELSE
   ALLOCATE(GCOVER(JPCOVER))
 END IF
- CALL OLD_NAME(HPROGRAM,'COVER_LIST      ',YRECFM)
+ YRECFMOLD='COVER_LIST'
+ CALL OLD_NAME(HPROGRAM,YRECFMOLD,YRECFM)
  CALL READ_SURF(HPROGRAM,YRECFM,GCOVER(:),IRESP,HDIR='-')
 !
 OCOVER=.FALSE.
 OCOVER(:SIZE(GCOVER))=GCOVER(:)
 !
 #ifdef MNH_PARALLEL
-#ifndef NOMPI
-CALL MPI_ALLREDUCE(GCOVER, OCOVER, SIZE(GCOVER),MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, IINFO)
-#endif
+CALL MPI_ALLREDUCE(GCOVER, OCOVER, SIZE(GCOVER), MNHLOG_MPI, MPI_LOR, NMNH_COMM_WORLD, IINFO)
 #endif
 !
 DEALLOCATE(GCOVER)

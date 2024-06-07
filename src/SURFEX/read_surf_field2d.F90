@@ -49,7 +49,7 @@
 !*       0.    DECLARATIONS
 !              ------------
 !
-USE MODD_SURF_PAR, ONLY : NUNDEF
+USE MODD_SURF_PAR, ONLY : NUNDEF, LEN_HREC
 !
 USE MODI_READ_SURF
 #ifdef SFX_MNH
@@ -67,7 +67,7 @@ IMPLICIT NONE
 !
 CHARACTER(LEN=6),                 INTENT(IN) :: HPROGRAM     ! calling program
 REAL, DIMENSION(:,:),          INTENT(INOUT) :: PFIELD2D     ! 2D field to be read
-CHARACTER(LEN=12),                INTENT(IN) :: HFIELDNAME   ! name of the field PFIELD2D. Example : 'X_Y_TG'
+CHARACTER(LEN=LEN_HREC),                INTENT(IN) :: HFIELDNAME   ! name of the field PFIELD2D. Example : 'X_Y_TG'
 CHARACTER(LEN=*), OPTIONAL,      INTENT(OUT) :: HCOMMENT   !comment string
 CHARACTER(LEN=1),OPTIONAL,        INTENT(IN) :: HDIR ! type of field :
 !                                             ! 'H' : field with

@@ -33,6 +33,10 @@ SUBROUTINE SFX_OASIS_READ_NAM(HPROGRAM,PTSTEP_SURF,HINIT)
 !!    -------------
 !!      Original    05/2008 
 !!    10/2016 B. Decharme : bug surface/groundwater coupling 
+!!      Modified    11/2014 : J. Pianezze - add wave coupling parameters
+!!                                          and surface pressure for ocean coupling
+!!                  01/2020 : C. Lebeaupin - new check options before stopping
+!!      R. Séférian    11/16 : Implement carbon cycle coupling (Earth system model)
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
@@ -40,10 +44,11 @@ SUBROUTINE SFX_OASIS_READ_NAM(HPROGRAM,PTSTEP_SURF,HINIT)
 !
 USE MODN_SFX_OASIS
 !
-USE MODD_SFX_OASIS, ONLY : LOASIS, XRUNTIME,               &
-                           LCPL_LAND, LCPL_GW, LCPL_FLOOD, &
-                           LCPL_CALVING, LCPL_LAKE,        &
-                           LCPL_SEA, LCPL_SEAICE
+USE MODD_SFX_OASIS, ONLY : LOASIS, XRUNTIME,                &
+                           LCPL_LAND, LCPL_GW, LCPL_FLOOD,  &
+                           LCPL_CALVING, LCPL_LAKE,         &
+                           LCPL_SEA, LCPL_SEAICE, LCPL_WAVE,&
+                           LCPL_RIVCARB, LCPL_SEACARB
 !
 USE MODE_POS_SURF
 !
@@ -71,8 +76,10 @@ CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: HINIT       ! choice of fields to init
 INTEGER,          PARAMETER :: KIN   = 1
 INTEGER,          PARAMETER :: KOUT  = 0
 CHARACTER(LEN=5), PARAMETER :: YLAND = 'land'
+ CHARACTER(LEN=5), PARAMETER :: YDIAG = 'diag'
 CHARACTER(LEN=5), PARAMETER :: YLAKE = 'lake'
 CHARACTER(LEN=5), PARAMETER :: YSEA  = 'ocean'
+CHARACTER(LEN=5), PARAMETER :: YWAVE = 'wave'
 !
 !*       0.3   Declarations of local variables
 !              -------------------------------
@@ -101,6 +108,10 @@ LCPL_CALVING = .FALSE.
 LCPL_LAKE    = .FALSE.
 LCPL_SEA     = .FALSE.
 LCPL_SEAICE  = .FALSE.
+LCPL_WAVE    = .FALSE.
+!
+LCPL_RIVCARB = .FALSE.
+LCPL_SEACARB = .FALSE.
 !
 IF(.NOT.LOASIS)THEN
   IF (LHOOK) CALL DR_HOOK('SFX_OASIS_READ_NAM',1,ZHOOK_HANDLE)
@@ -153,13 +164,26 @@ ELSE
    WRITE(ILUOUT,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
 ENDIF
 !
+CALL POSNAM(ILUNAM,'NAM_SFX_WAVE_CPL',GFOUND,ILUOUT)
+!
+IF (GFOUND) THEN
+   READ(UNIT=ILUNAM,NML=NAM_SFX_WAVE_CPL)
+ELSE
+   WRITE(ILUOUT,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+   WRITE(ILUOUT,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+   WRITE(ILUOUT,*)'NAM_SFX_WAVE_CPL not found : Surfex not coupled with wave model'
+   WRITE(ILUOUT,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+   WRITE(ILUOUT,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+ENDIF
+!
 CALL CLOSE_NAMELIST(HPROGRAM,ILUNAM)
 !
 IF(XTSTEP_CPL_LAND>0.0)LCPL_LAND=.TRUE.
 IF(XTSTEP_CPL_LAKE>0.0)LCPL_LAKE=.TRUE.
 IF(XTSTEP_CPL_SEA >0.0)LCPL_SEA =.TRUE.
+IF(XTSTEP_CPL_WAVE>0.0)LCPL_WAVE=.TRUE.
 !
-IF(.NOT.LCPL_LAND.AND..NOT.LCPL_SEA)THEN
+IF(.NOT.LCPL_LAND.AND..NOT.LCPL_SEA.AND..NOT.LCPL_WAVE)THEN
   CALL ABOR1_SFX('SFX_OASIS_READ_NAM: OASIS USED BUT NAMELIST NOT FOUND')
 ENDIF
 !
@@ -202,6 +226,12 @@ IF(LCPL_LAND)THEN
   YKEY  ='CDRAIN'
   YCOMMENT='Deep drainage'
   CALL CHECK_FIELD(CDRAIN,YKEY,YCOMMENT,YLAND,KOUT)
+!
+! River routing model part of TWS
+!
+  YKEY  ='CTWS'
+  YCOMMENT='terrestrial water storage'
+  CALL CHECK_FIELD(CTWS,YKEY,YCOMMENT,YDIAG,KIN)
 !
 ! Particular case due to calving case
 !
@@ -259,6 +289,18 @@ IF(LCPL_LAND)THEN
     YCOMMENT='Flood potential infiltration'
     CALL CHECK_FIELD(CPIFLOOD,YKEY,YCOMMENT,YLAND,KIN)
 !
+  ENDIF
+!
+! Particular case due to riverine carbon cycle case
+!
+  IF(LEN_TRIM(CDOCFLUX)>0)THEN
+    LCPL_RIVCARB = .TRUE.
+  ENDIF
+!
+  IF(LCPL_RIVCARB)THEN
+    YKEY  ='CDOCFLUX'
+    YCOMMENT='Riverine DOC flux'
+    CALL CHECK_FIELD(CDOCFLUX,YKEY,YCOMMENT,YLAND,KOUT)
   ENDIF
 !
 ENDIF
@@ -359,6 +401,10 @@ IF(LCPL_SEA)THEN
   YCOMMENT='Freshwater flux'
   CALL CHECK_FIELD(CSEA_WATF,YKEY,YCOMMENT,YSEA,KOUT)
 !
+  YKEY  ='CSEA_PRES'
+  YCOMMENT='Surface pressure'
+  CALL CHECK_FIELD(CSEA_PRES,YKEY,YCOMMENT,YSEA,KOUT)
+!
 ! Sea Input variables
 !
   YKEY  ='CSEA_SST'
@@ -412,6 +458,79 @@ IF(LCPL_SEA)THEN
     CALL CHECK_FIELD(CSEAICE_ALB,YKEY,YCOMMENT,YSEA,KIN)
 !
   ENDIF
+!
+! Sea-Land-Atm carbon cycle coupling
+!
+  IF(LEN_TRIM(CSEA_CO2 )>0 .OR. LEN_TRIM(CSEA_FCO2)>0     )THEN
+     LCPL_SEACARB=.TRUE.
+  ENDIF
+!
+  IF(LCPL_SEACARB)THEN
+!
+!   Output variables required for marine biogeochemistry
+!
+    YKEY  ='CSEA_CO2'
+    YCOMMENT='Surface atmospheric CO2 concentration (ppm)'
+    CALL CHECK_FIELD(CSEA_CO2,YKEY,YCOMMENT,YSEA,KOUT)
+!
+!   marine biogeochemistry Input variables required for carbon cycle coupling
+!
+    YKEY  ='CSEA_FCO2'
+    YCOMMENT='Sea carbon flux (molC m-2 s-1)'
+    CALL CHECK_FIELD(CSEA_FCO2,YKEY,YCOMMENT,YSEA,KIN)
+!
+  ENDIF
+!
+ENDIF
+!
+!-------------------------------------------------------------------------------
+!
+!*       6.     Check status for Wave fields 
+!               ---------------------------
+!
+IF(LCPL_WAVE)THEN
+!
+  IF(YINIT/='PRE')THEN
+    IF(MOD(XTSTEP_CPL_WAVE,PTSTEP_SURF)/=0.)THEN
+      WRITE(ILUOUT,*)'! MOD(XTSTEP_SURF,XTSTEP_CPL_WAVE) /= 0     !'
+      WRITE(ILUOUT,*)'XTSTEP_SURF =',PTSTEP_SURF,'XTSTEP_CPL_WAVE = ',XTSTEP_CPL_WAVE
+      IF(PTSTEP_SURF>XTSTEP_CPL_WAVE) &
+      WRITE(ILUOUT,*)'! XTSTEP_SURF (model timestep) is superiror to  XTSTEP_CPL_WAVE !'
+      CALL ABOR1_SFX('SFX_OASIS_READ_NAM: XTSTEP_SURF and XTSTEP_CPL_WAVE not consistent !!!')
+    ENDIF
+  ENDIF
+!
+! Wave Output variables
+!
+  YKEY  ='CWAVE_U10'
+  YCOMMENT='10m u-wind speed'
+  CALL CHECK_FIELD(CWAVE_U10,YKEY,YCOMMENT,YWAVE,KOUT)
+!
+  YKEY  ='CWAVE_V10'
+  YCOMMENT='10m v-wind speed'
+  CALL CHECK_FIELD(CWAVE_V10,YKEY,YCOMMENT,YWAVE,KOUT)
+!
+! Wave Input variables
+!
+  YKEY  ='CWAVE_CHA'
+  YCOMMENT='Charnock Coefficient'
+  CALL CHECK_FIELD(CWAVE_CHA,YKEY,YCOMMENT,YWAVE,KIN)
+!
+  YKEY  ='CWAVE_UCU'
+  YCOMMENT='u-current velocity'
+  CALL CHECK_FIELD(CWAVE_UCU,YKEY,YCOMMENT,YWAVE,KIN)
+!
+  YKEY  ='CWAVE_VCU'
+  YCOMMENT='v-current velocity'
+  CALL CHECK_FIELD(CWAVE_VCU,YKEY,YCOMMENT,YWAVE,KIN)
+!
+  YKEY  ='CWAVE_HS'
+  YCOMMENT='Significant wave height'
+  CALL CHECK_FIELD(CWAVE_HS,YKEY,YCOMMENT,YWAVE,KIN)
+!
+  YKEY  ='CWAVE_TP'
+  YCOMMENT='Peak period'
+  CALL CHECK_FIELD(CWAVE_TP,YKEY,YCOMMENT,YWAVE,KIN)
 !  
 ENDIF
 !
@@ -450,12 +569,14 @@ IF(LEN_TRIM(HFIELD)==0)THEN
   ENDIF
 !
   SELECT CASE (HTYP)
-     CASE(YLAND)
+     CASE(YLAND,YDIAG)
           YNAMELIST='NAM_SFX_LAND_CPL'
      CASE(YSEA)
           YNAMELIST='NAM_SFX_SEA_CPL'
      CASE(YLAKE)
           YNAMELIST='NAM_SFX_LAKE_CPL'          
+     CASE(YWAVE)
+          YNAMELIST='NAM_SFX_WAVE_CPL'
      CASE DEFAULT
           CALL ABOR1_SFX('SFX_OASIS_READ_NAM: TYPE NOT SUPPORTED OR IMPLEMENTD : '//TRIM(HTYP))               
   END SELECT
@@ -469,7 +590,11 @@ IF(LEN_TRIM(HFIELD)==0)THEN
 ! For oceanic coupling do not stop the model if a field from surfex to ocean is
 ! not  done because many particular case can be used
 !
-  IF(KID==0.AND.HTYP/=YLAND)THEN
+  IF(HTYP==YDIAG.OR.(KID==0.AND.HTYP/=YLAND))THEN
+    LSTOP=.FALSE.
+  ELSEIF((KID==0).AND.(HTYP==YSEA))THEN
+    LSTOP=.FALSE.
+  ELSEIF((KID==1).AND.(HTYP==YWAVE))THEN
     LSTOP=.FALSE.
   ELSE
     LSTOP=.TRUE.

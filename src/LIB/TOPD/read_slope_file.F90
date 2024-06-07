@@ -53,10 +53,9 @@ USE MODI_OPEN_FILE
 USE MODI_CLOSE_FILE
 !
 USE MODD_TOPD_PAR, ONLY : NUNIT
-USE MODD_TOPODYN, ONLY : NPMAX
 USE MODD_SURF_PAR,  ONLY : XUNDEF
 !
-USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
+USE YOMHOOK   ,ONLY : LHOOK, DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
 !
 IMPLICIT NONE
@@ -80,35 +79,49 @@ INTEGER                   :: IWRK        ! work variable
 INTEGER                   :: ILUOUT      ! Unit of the files
 !
 REAL                      :: ZWRK        ! work variable
-REAL, DIMENSION(KNMC)     :: ZDAREA      ! drainage area (aire drainee)
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
-CHARACTER(LEN=100)    :: YHEADER    ! Header File to be read
+ CHARACTER(LEN=100)    :: YHEADER    ! Header File to be read
 !------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('READ_SLOPE_FILE',0,ZHOOK_HANDLE)
 !
 !*       0.2    preparing file openning
 !               ----------------------
- CALL GET_LUOUT(HPROGRAM,ILUOUT)
+CALL GET_LUOUT(HPROGRAM,ILUOUT)
 !
- CALL OPEN_FILE(HPROGRAM,NUNIT,HFILE,HFORM,HACTION='READ')
+CALL OPEN_FILE(HPROGRAM,NUNIT,HFILE,HFORM,HACTION='READ')
 !
 READ(NUNIT,*) YHEADER
 !
 IF (INDEX(YHEADER,'pixel_REF')/=0) THEN !Slope file from new java+GRASS chain
- write(ILUOUT,*) 'Slope file from new java + GRASS chain'
- DO JJ=1,KNMC
-  READ(NUNIT,*,END=110) IWRK, PTANB(JJ),PLAMBDA(JJ) 
- ENDDO
- PSLOP(:)=PLAMBDA(:) !not used
- PDAREA(:)=PLAMBDA(:) !not used
+  !
+  write(ILUOUT,*) 'Slope file from new java + GRASS chain'
+  !
+  DO JJ=1,KNMC
+    READ(NUNIT,*,END=110) IWRK, PTANB(JJ),PLAMBDA(JJ) 
+  ENDDO
+  !
+  PSLOP(:)=PLAMBDA(:) !not used
+  PDAREA(:)=PLAMBDA(:) !not used
+  !
 ELSE !Slope file from old f77  chain
- write(*,*) 'Slope file from old f77 chain'
- DO JJ=1,KNMC
-   READ(NUNIT,*,END=110) IWRK, PTANB(JJ), PSLOP(JJ), ZWRK, PDAREA(JJ)
-  PLAMBDA(JJ) = LOG(PDAREA(JJ)/PSLOP(JJ))
- ENDDO
+  !
+  write(*,*) 'Slope file from old f77 chain'
+  !
+  DO JJ=1,KNMC
+    READ(NUNIT,*,END=110) IWRK, PTANB(JJ), PSLOP(JJ), ZWRK, PDAREA(JJ)
+    !
+    IF (PSLOP(JJ)/=0 .AND. PDAREA(JJ)/PSLOP(JJ)>0 ) THEN
+      PLAMBDA(JJ) = LOG(PDAREA(JJ)/PSLOP(JJ))
+    ELSE 
+      PLAMBDA(JJ) = 20
+    ENDIF
+    !
+  ENDDO
+  !
 ENDIF
+!
+write(*,*) 'Slope file read:',YHEADER
 110 CALL CLOSE_FILE(HPROGRAM,NUNIT)
 !
 IF (LHOOK) CALL DR_HOOK('READ_SLOPE_FILE',1,ZHOOK_HANDLE)

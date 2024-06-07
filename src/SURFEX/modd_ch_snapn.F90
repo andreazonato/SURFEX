@@ -37,6 +37,7 @@
 !             ------------
 !
 USE MODD_TYPE_EFUTIL
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -56,7 +57,7 @@ TYPE CH_EMIS_SNAP_t
 !                          !  'LEGAL' : LEGAL time
 !                          !
 
-  CHARACTER(LEN=12), DIMENSION(:), POINTER :: CEMIS_NAME
+  CHARACTER(LEN=LEN_HREC), DIMENSION(:), POINTER :: CEMIS_NAME
 !                          ! name of the chemical fields (emitted species)
   CHARACTER(LEN=40), DIMENSION(:), POINTER :: CEMIS_COMMENT
 !                          ! comment on the chemical fields (emitted species)

@@ -19,11 +19,11 @@
                               PCHEATN, PLEG_DELTA, PLEGI_DELTA, PHUGI,     &
                               PHVG, PHVN, PFROZEN1, PFLXC_C_A, PFLXC_G_C,  &
                               PFLXC_VG_C, PFLXC_VN_C, PFLXC_N_C, PFLXC_N_A,&
-                              PFLXC_MOM, PTG, PSNOWLIQ, PFLXC_V_C, PHVGS, PHVNS, & 
-                              PDQSAT_G, PDQSAT_V, PDQSATI_N, PTA_IC,       &
+                              PFLXC_MOM, PTG, PSNOWLIQ, PFLXC_V_C, PHVGS,  & 
+                              PHVNS, PDQSAT_G, PDQSAT_V, PDQSATI_N, PTA_IC,&
                               PQA_IC, PUSTAR2_IC, PVMOD, PDELTAT_G,        &
                               PDELTAT_V, PDELTAT_N, PGRNDFLUX, PDEEP_FLUX, &
-                              PDELHEATV_SFC, PDELHEATG_SFC, PDELHEATG     )
+                              PDELHEATV_SFC                                )
 !     ##########################################################################
 !
 !!****  *E_BUDGET*  
@@ -93,15 +93,15 @@ USE MODD_DIAG_n, ONLY : DIAG_t
 USE MODD_DIAG_EVAP_ISBA_n, ONLY : DIAG_EVAP_ISBA_t
 USE MODD_DIAG_MISC_ISBA_n, ONLY : DIAG_MISC_ISBA_t
 !
-USE MODD_CSTS,                    ONLY : XLVTT, XLSTT, XTT, XCPD, XCPV, XCL,  &
+USE MODD_CSTS,                    ONLY : XLVTT, XLSTT, XTT, XCPD, XCPV, XCL, &
                                          XDAY, XPI, XLMTT, XRHOLW
 USE MODD_SURF_ATM,                ONLY : LCPL_ARP
 USE MODD_SURF_PAR,                ONLY : XUNDEF
 USE MODD_SNOW_METAMO,             ONLY : XSNOWDZMIN
-
+!
 USE MODE_THERMOS
 USE MODE_MEB,                     ONLY : SFC_HEATCAP_VEG, MEBLITTER_THRM
-USE MODE_SNOW3L,                  ONLY : SNOW3LHOLD
+USE MODE_SNOW3L,                  ONLY : SNOW3LHOLD,SNOWCROHOLD
 !
 USE MODI_TRIDIAG_GROUND_RM_COEFS
 USE MODI_TRIDIAG_GROUND_RM_SOLN
@@ -266,10 +266,8 @@ REAL, DIMENSION(:),   INTENT(OUT)  :: PGRNDFLUX
 !
 REAL, DIMENSION(:),  INTENT(OUT)   :: PDEEP_FLUX ! Heat flux at bottom of ISBA (W/m2)
 !
-REAL, DIMENSION(:),  INTENT(OUT)   :: PDELHEATV_SFC, PDELHEATG_SFC, PDELHEATG
+REAL, DIMENSION(:),  INTENT(OUT)   :: PDELHEATV_SFC
 !                                     PDELHEATV_SFC = change in heat storage of the vegetation canopy layer over the current time step (W m-2)
-!                                     PDELHEATG_SFC = change in heat storage of the surface soil layer over the current time step (W m-2)
-!                                     PDELHEATG     = change in heat storage of the entire soil column over the current time step (W m-2)
 !
 !*      0.2    declarations of local variables
 !
@@ -437,7 +435,7 @@ IF(IO%CISBA == 'DIF')THEN
 ! quite robust. Note, this only corresponds to the snow-covered part of grid box,
 ! so it is more accurate as the snow fraction approaches unity.
 ! Starting from snowpack surface downward to base of ground:
-!   
+!
    JL                     = 1
    ZD(:,JL)               = DMK%XSNOWDZ(:,1)
    ZT(:,JL)               = ZTNO(:,1)
@@ -608,8 +606,8 @@ ZWORK(:)          = PTHRMA_TA(:)*( 1.0 + PPET_A_COEF(:)*(                       
 ZPET_A_COEF_P(:)  =   PPET_A_COEF(:)*PFLXC_C_A(:)*ZPSNAG(:)*PTHRMA_TC(:)/ZWORK(:)
 ZPET_B_COEF_P(:)  = ( PPET_B_COEF(:) - PTHRMB_TA(:) +                                            &
                       PPET_A_COEF(:)*(PFLXC_C_A(:)*ZPSNAG(:)*(PTHRMB_TC(:)-PTHRMB_TA(:)) +       &
-                           PFLXC_N_A(:)*PEK%XPSN(:)*PPSNA(:)*(PTHRMB_TN(:)-PTHRMB_TA(:)) ) ) /ZWORK(:)
-ZPET_C_COEF_P(:)  =   PPET_A_COEF(:)*PFLXC_N_A(:)*PEK%XPSN(:)*PPSNA(:)*PTHRMA_TN(:)       /ZWORK(:)
+                      PFLXC_N_A(:)*PEK%XPSN(:)*PPSNA(:)*(PTHRMB_TN(:)-PTHRMB_TA(:)) ) ) /ZWORK(:)
+ZPET_C_COEF_P(:)  =   PPET_A_COEF(:)*PFLXC_N_A(:)*PEK%XPSN(:)*PPSNA(:)*PTHRMA_TN(:)     /ZWORK(:)
 
 ! q coefficients:
 
@@ -859,7 +857,12 @@ ENDDO
 ! NOTE this mimicks what is assumed to be done in the snow scheme. If a more sophisticated
 ! snow hydrology scheme is used, this code should be adapted.
 !
-ZWHOLDMAX(:,:)        = SNOW3LHOLD(PSNOWRHO,DMK%XSNOWDZ) ! m
+IF (PEK%TSNOW%SCHEME=='CRO') THEN
+  ZWHOLDMAX(:,:)        = SNOWCROHOLD(PSNOWRHO,PSNOWLIQ,DMK%XSNOWDZ) ! m
+ELSE
+  ZWHOLDMAX(:,:)        = SNOW3LHOLD(PSNOWRHO,DMK%XSNOWDZ) ! m
+END IF
+
 ZWORK(:)              = MAX(0., PSNOWLIQ(:,1)-ZWHOLDMAX(:,1))
 PSNOWLIQ(:,1)         = PSNOWLIQ(:,1) - ZWORK(:)
 DO JK=2,JNSNOW
@@ -936,8 +939,8 @@ PGRNDFLUX(:)    = PEK%XPSN(:)*ZTCONDA_DELZ_NG(:)*( DMK%XSNOWTEMP(:,JNSNOW) - PTG
 !*      12.     Energy Storage Diagnostics (W m-2)
 !               ----------------------------------
 !
-PDELHEATG_SFC(:) = PCHEATG(:)*PDELTAT_G(:)/PTSTEP 
-PDELHEATV_SFC(:) = PCHEATV(:)*PDELTAT_V(:)/PTSTEP 
+DEK%XDELHEATG_SFC(:) = PCHEATG(:)*PDELTAT_G(:)/PTSTEP 
+PDELHEATV_SFC    (:) = PCHEATV(:)*PDELTAT_V(:)/PTSTEP 
 !
 IF(IO%CISBA == 'DIF')THEN
 
@@ -953,11 +956,11 @@ IF(IO%CISBA == 'DIF')THEN
 ! These terms are used for computing energy budget diagnostics.
 !
 !
-   PDELHEATG(:)        = PDELHEATG_SFC(:) ! initialize
+   DEK%XDELHEATG(:)        = DEK%XDELHEATG_SFC(:) ! initialize
    DO JK=2,JNGRND
       DO JJ=1,JNPTS
-         PDELHEATG(JJ) =  PDELHEATG(JJ) + PSOILHCAPZ(JJ,JK)*(PD_G(JJ,JK)-PD_G(JJ,JK-1))*    &
-                          (PTG(JJ,JK) - ZTGO(JJ,JK))/PTSTEP
+         DEK%XDELHEATG(JJ) =  DEK%XDELHEATG(JJ) + PSOILHCAPZ(JJ,JK)*(PD_G(JJ,JK)-PD_G(JJ,JK-1))*    &
+                              (PTG(JJ,JK) - ZTGO(JJ,JK))/PTSTEP
       ENDDO
    ENDDO
 !
@@ -972,7 +975,7 @@ ELSE
 
 ! These terms are used for computing energy budget diagnostics.
 !
-   PDELHEATG(:) = PDELHEATG_SFC(:) + DEK%XRESTORE(:)
+   DEK%XDELHEATG(:) = DEK%XDELHEATG_SFC(:) + DEK%XRESTORE(:)
 !
 ENDIF
 

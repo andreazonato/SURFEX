@@ -3,7 +3,7 @@
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 !     ###############################################################################
-SUBROUTINE COUPLING_SEAFLUX_SBL_n (CHS, DTS, DGS, O, OR, G, S, SB, DST, SLT,                      &
+SUBROUTINE COUPLING_SEAFLUX_SBL_n (CHS, DTS, DGS, O, OR, G, S, SB, AT, DST, SLT,                    &
                                   HPROGRAM, HCOUPLING,  PTIMEC, PTSTEP, KYEAR, KMONTH, KDAY, PTIME, &
                                   KI, KSV, KSW, PTSUN, PZENITH, PZENITH2, PAZIM, PZREF, PUREF,      &
                                   PU, PV, PQA, PTA, PRHOA, PSV, PCO2, HSV,                          &
@@ -11,7 +11,7 @@ SUBROUTINE COUPLING_SEAFLUX_SBL_n (CHS, DTS, DGS, O, OR, G, S, SB, DST, SLT,    
                                   PSFTQ, PSFTH, PSFTS, PSFCO2, PSFU, PSFV,                          &
                                   PTRAD, PDIR_ALB, PSCA_ALB, PEMIS, PTSURF, PZ0, PZ0H, PQSURF,      &
                                   PPEW_A_COEF, PPEW_B_COEF, PPET_A_COEF, PPEQ_A_COEF, PPET_B_COEF,  &
-                                  PPEQ_B_COEF, HTEST                                             )
+                                  PPEQ_B_COEF, PZWS, HTEST                                           )
 !     ###############################################################################
 !
 !!****  *COUPLING_SEAFLUX_SBL_n * - Adds a SBL into SEAFLUX
@@ -38,6 +38,7 @@ SUBROUTINE COUPLING_SEAFLUX_SBL_n (CHS, DTS, DGS, O, OR, G, S, SB, DST, SLT,    
 !!      S. Riette   10/2009 Iterative computation of XZ0
 !!      S. Riette   01/2010 Use of interpol_sbl to compute 10m wind diagnostic
 !!      B. Decharme  04/2013 new coupling variables
+!!      Bielli S. 02/2019  Sea salt : significant sea wave height influences salt emission; 5 salt modes
 !----------------------------------------------------------------
 !
 !
@@ -56,6 +57,8 @@ USE MODD_SLT_n, ONLY : SLT_t
 USE MODD_SURF_PAR,         ONLY : XUNDEF
 USE MODD_CSTS,             ONLY : XCPD
 ! 
+USE MODD_SURF_ATM_TURB_n, ONLY : SURF_ATM_TURB_t
+!
 USE MODE_COUPLING_CANOPY
 !
 USE MODI_INIT_WATER_SBL
@@ -81,6 +84,7 @@ TYPE(OCEAN_REL_t), INTENT(INOUT) :: OR
 TYPE(GRID_t), INTENT(INOUT) :: G
 TYPE(SEAFLUX_t), INTENT(INOUT) :: S
 TYPE(CANOPY_t), INTENT(INOUT) :: SB
+TYPE(SURF_ATM_TURB_t), INTENT(IN) :: AT         ! atmospheric turbulence parameters
 TYPE(DST_t), INTENT(INOUT) :: DST
 TYPE(SLT_t), INTENT(INOUT) :: SLT
 !
@@ -122,6 +126,7 @@ REAL, DIMENSION(KI), INTENT(IN)  :: PLW       ! longwave radiation (on horizonta
 !                                             !                                       (W/m2)
 REAL, DIMENSION(KI), INTENT(IN)  :: PPS       ! pressure at atmospheric model surface (Pa)
 REAL, DIMENSION(KI), INTENT(IN)  :: PPA       ! pressure at forcing level             (Pa)
+REAL, DIMENSION(KI), INTENT(IN)  :: PZWS      ! significant sea wave                  (m)
 REAL, DIMENSION(KI), INTENT(IN)  :: PCO2      ! CO2 concentration in the air          (kg/m3)
 REAL, DIMENSION(KI), INTENT(IN)  :: PSNOW     ! snow precipitation                    (kg/m2/s)
 REAL, DIMENSION(KI), INTENT(IN)  :: PRAIN     ! liquid precipitation                  (kg/m2/s)
@@ -229,7 +234,7 @@ IF (S%LSBL) THEN
 !              ---------------------------------
 !
   IF(ANY(SB%XT(:,:) == XUNDEF)) THEN
-    CALL INIT_WATER_SBL(SB, PPA, PPS, PTA, PQA, PRHOA, PU, PV, PRAIN, PSNOW,  &
+    CALL INIT_WATER_SBL(SB, AT, PPA, PPS, PTA, PQA, PRHOA, PU, PV, PRAIN, PSNOW,  &
                         PSFTH, PSFTQ, PZREF, PUREF, S%XSST, S%XZ0 )
   ENDIF
 !
@@ -296,13 +301,13 @@ END IF
 !*      2.     Call of SEAFLUX
 !              ------------
 !
-  CALL COUPLING_SEAFLUX_n(CHS, DTS, DGS, O, OR, G, S, DST, SLT, HPROGRAM, GCOUPLING, &
+  CALL COUPLING_SEAFLUX_n(CHS, DTS, DGS, O, OR, G, S, AT, DST, SLT, HPROGRAM, GCOUPLING, &
              PTIMEC, PTSTEP, KYEAR, KMONTH, KDAY, PTIME, KI, KSV, KSW,                &
              PTSUN, PZENITH, PZENITH2, PAZIM, ZZREF, ZUREF, ZU, ZV, ZQA, ZTA, PRHOA,  &
              PSV, PCO2, HSV, PRAIN, PSNOW, PLW, PDIR_SW, PSCA_SW, PSW_BANDS, PPS, ZPA,&
              PSFTQ, PSFTH, PSFTS, PSFCO2, PSFU, PSFV, PTRAD, PDIR_ALB, PSCA_ALB,      &
              PEMIS, PTSURF, PZ0, PZ0H, PQSURF, ZPEW_A_COEF, ZPEW_B_COEF,              &
-             ZPET_A_COEF, ZPEQ_A_COEF, ZPET_B_COEF, ZPEQ_B_COEF, HTEST)
+             ZPET_A_COEF, ZPEQ_A_COEF, ZPET_B_COEF, ZPEQ_B_COEF, PZWS, HTEST)
 !
 !-------------------------------------------------------------------------------------
 !

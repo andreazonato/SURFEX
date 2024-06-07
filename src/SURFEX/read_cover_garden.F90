@@ -11,6 +11,7 @@
 !
 !
 USE MODI_READ_SURF
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
@@ -31,7 +32,7 @@ LOGICAL,           INTENT(OUT) :: OGARDEN   ! T: Definition of urban green areas
 !  ---------------
 !
  CHARACTER(LEN=1) :: YDIR
- CHARACTER(LEN=12) :: YRECFM     ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM     ! Name of the article to be read
 INTEGER           :: IRESP      ! reading return code
 !
 INTEGER           :: IVERSION   ! surface version

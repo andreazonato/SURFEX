@@ -26,8 +26,11 @@ MODULE MODD_SFX_OASIS
 !!    MODIFICATIONS
 !!    -------------
 !!      Original       10/13
+!!      Modified       11/2014 : J. Pianezze - add wave coupling and creation of OASIS grids
 !!      S.Senesi       08/2015 : add CMODEL_NAME
 !!    10/2016 B. Decharme : bug surface/groundwater coupling 
+!!      R. Séférian    08/2016 : add riverine carbon cycle coupling
+!!      R. Séférian    11/16 : Implement carbon cycle coupling (Earth system model)
 !
 !*       0.   DECLARATIONS
 !             ------------
@@ -40,12 +43,14 @@ IMPLICIT NONE
 !
 !-------------------------------------------------------------------------------
 !
-LOGICAL             :: LOASIS   = .FALSE. ! To use oasis coupler or not
+LOGICAL             :: LOASIS      = .FALSE. ! To use oasis coupler or not
 !
-CHARACTER(LEN=6)    :: CMODEL_NAME        ! component model name (i.e. name under which 
-!                                         ! Surfex is declared to Oasis)
+LOGICAL             :: LOASIS_GRID = .FALSE. ! To define oasis grids, areas and masks during simulation
 !
-REAL                :: XRUNTIME = 0.0     ! Total simulated time in oasis namcouple (s)
+CHARACTER(LEN=6)    :: CMODEL_NAME           ! component model name (i.e. name under which 
+!                                            ! Surfex is declared to Oasis)
+!
+REAL                :: XRUNTIME    = 0.0     ! Total simulated time in oasis namcouple (s)
 !
 !-------------------------------------------------------------------------------
 !
@@ -57,6 +62,7 @@ LOGICAL             :: LCPL_LAND    = .FALSE. ! Fields to/from surfex land area
 LOGICAL             :: LCPL_CALVING = .FALSE. ! Calving flux from surfex land area
 LOGICAL             :: LCPL_GW      = .FALSE. ! Fields to/from surfex land area to/from groundwater scheme
 LOGICAL             :: LCPL_FLOOD   = .FALSE. ! Fields to/from surfex land area to/from floodplains scheme
+LOGICAL             :: LCPL_RIVCARB = .FALSE. ! Riverine carbon flux from surfex land area
 !
 ! Output variables
 !
@@ -64,6 +70,7 @@ INTEGER             :: NRUNOFF_ID    ! Surface runoff id
 INTEGER             :: NDRAIN_ID     ! Drainage id
 INTEGER             :: NCALVING_ID   ! Calving flux id
 INTEGER             :: NSRCFLOOD_ID  ! Floodplains freshwater flux id
+INTEGER             :: NDOCFLUX_ID   ! Riverine DOC flux id
 !
 ! Input variables
 !
@@ -71,6 +78,7 @@ INTEGER             :: NWTD_ID       ! water table depth id
 INTEGER             :: NFWTD_ID      ! grid-cell fraction of water table rise id
 INTEGER             :: NFFLOOD_ID    ! Floodplains fraction id
 INTEGER             :: NPIFLOOD_ID   ! Potential flood infiltration id
+INTEGER             :: NTWS_ID       ! Terrestrial Water Storage
 !
 !-------------------------------------------------------------------------------
 !
@@ -95,6 +103,7 @@ INTEGER             :: NLAKE_WATF_ID ! Freshwater id
 !
 LOGICAL             :: LCPL_SEA     = .FALSE. ! Fields to/from surfex sea/water area
 LOGICAL             :: LCPL_SEAICE  = .FALSE. ! Fields to/from surfex sea-ice area (e.g. GELATO 3D, ...)
+LOGICAL             :: LCPL_SEACARB = .FALSE. ! Fields to/from surfex related to carbon cycle (e.g. PISCES 3D, ...)
 !
 ! Sea Output variables
 !
@@ -108,6 +117,8 @@ INTEGER             :: NSEA_EVAP_ID ! Evaporation id
 INTEGER             :: NSEA_RAIN_ID ! Rainfall id
 INTEGER             :: NSEA_SNOW_ID ! Snowfall id
 INTEGER             :: NSEA_WATF_ID ! Freshwater id
+INTEGER             :: NSEA_CO2_ID  ! atmospheric surface CO2 id
+INTEGER             :: NSEA_PRES_ID ! Surface pressure id
 !
 ! Sea-ice Output variables
 !
@@ -117,15 +128,37 @@ INTEGER             :: NSEAICE_EVAP_ID ! Sea-ice sublimation id
 !
 ! Sea Input variables
 !
-INTEGER             :: NSEA_SST_ID ! Sea surface temperature id
-INTEGER             :: NSEA_UCU_ID ! Sea u-current stress id
-INTEGER             :: NSEA_VCU_ID ! Sea v-current stress id
+INTEGER             :: NSEA_SST_ID  ! Sea surface temperature id
+INTEGER             :: NSEA_UCU_ID  ! Sea u-current stress id
+INTEGER             :: NSEA_VCU_ID  ! Sea v-current stress id
+INTEGER             :: NSEA_FCO2_ID ! Sea carbon flux id
 !
 ! Sea-ice Input variables
 !
 INTEGER             :: NSEAICE_SIT_ID  ! Sea-ice Temperature id
 INTEGER             :: NSEAICE_CVR_ID  ! Sea-ice cover id
 INTEGER             :: NSEAICE_ALB_ID  ! Sea-ice albedo id
+!
+!-------------------------------------------------------------------------------
+!
+! * Wave variables for Surfex - Oasis coupling 
+!
+!-------------------------------------------------------------------------------
+!
+LOGICAL             :: LCPL_WAVE    = .FALSE. ! Fields to/from surfex wave area
+!
+! Wave Output variables
+!
+INTEGER             :: NWAVE_U10_ID ! 10m u-wind speed id
+INTEGER             :: NWAVE_V10_ID ! 10m v-wind speed id
+!
+! Wave Input variables
+!
+INTEGER             :: NWAVE_CHA_ID ! Charnock coefficient id
+INTEGER             :: NWAVE_UCU_ID ! Wave u-current velocity id
+INTEGER             :: NWAVE_VCU_ID ! Wave v-current velocity id
+INTEGER             :: NWAVE_HS_ID  ! Significant wave height id
+INTEGER             :: NWAVE_TP_ID  ! Peak period id
 !
 !-------------------------------------------------------------------------------
 !

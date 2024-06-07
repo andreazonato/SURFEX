@@ -32,6 +32,7 @@ SUBROUTINE READ_PREP_FILE_DATE (HPROGRAM,HFILE,HFILETYPE,TPTIME,KLUOUT)
 USE MODD_IO_BUFF, ONLY : CREC, NREC
 !
 USE MODD_TYPE_DATE_SURF
+USE MODD_SURF_PAR, ONLY: LEN_HREC
 !
 USE MODI_PREP_GRIB_GRID
 USE MODI_READ_BUFFER
@@ -58,7 +59,7 @@ INTEGER,            INTENT(IN)  :: KLUOUT    ! logical unit of output listing
 !
 !*      0.2    declarations of local variables
 !
- CHARACTER(LEN=12), DIMENSION(SIZE(CREC)) :: HREC   ! list of records already read/written
+ CHARACTER(LEN=LEN_HREC), DIMENSION(SIZE(CREC)) :: HREC   ! list of records already read/written
 INTEGER                            :: IREC
  CHARACTER(LEN=6)              :: YINMODEL  ! model from which GRIB file originates
  CHARACTER(LEN=6)             :: YINTERPTYPE

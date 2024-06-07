@@ -35,6 +35,10 @@
 !!      Original    04/2008
 !!      P. Lemoigne 04/2013 Add XDELTA_OROG to fix the maximum difference allowed between
 !!                          forcing and surface file orographies if LSET_FORC_ZS=.F
+!!      M. Dumont 12/2016 spectral calculation for Crocus CSPECSNOW
+!!      Y. Seity  09/2018 add LFAGMAP
+!!      B. Decharme 03/2020 delete LLAND_USE
+!!      B. Decharme 03/2020 add LGRID_MODE, 
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
@@ -50,10 +54,10 @@ IMPLICIT NONE
 !                                                   ! 'FA    '
 !                                                   ! 'ASCII '
 !                                                   ! 'LFI   '
- CHARACTER(LEN=6) :: CTIMESERIES_FILETYPE = 'NONE  ' ! type of the files contining the
+ CHARACTER(LEN=6) :: CTIMESERIES_FILETYPE = 'NONE  '! type of the files contining the
 !                                                   ! output diagnostic time series
 !                                                   ! 'NETCDF ', 'TEXTE '
- CHARACTER(LEN=6) :: CFORCING_FILETYPE    = 'NETCDF' ! type of atmospheric FORCING files
+ CHARACTER(LEN=6) :: CFORCING_FILETYPE    = 'NETCDF'! type of atmospheric FORCING files
 !                                                   ! 'NETDF', 'BINARY', or 'ASCII '
 !
 !*    Names of files
@@ -74,14 +78,18 @@ LOGICAL          :: LRESTART_2M = .FALSE.  ! write restart file
 LOGICAL          :: LINQUIRE    = .FALSE.  ! inquiry mode
 !      
 LOGICAL          :: LWRITE_COORD = .FALSE. ! write lat/lon of the target grid
+LOGICAL          :: LWRITE_TOPO  = .FALSE. ! write topography of the target grid
 !
 LOGICAL          :: LOUT_TIMENAME = .FALSE.! change the name of output file at the end of a day
                                            ! (ex: 19860502_00h00 -> 19860501_24h00)
 !
 LOGICAL          :: LDIAG_FA_NOCOMPACT = .FALSE. ! fa compaction for diagnostic files
 !
- LOGICAL           :: LALLOW_ADD_DIM   = .FALSE. ! allow multi-dimensional output 
+LOGICAL          :: LALLOW_ADD_DIM     = .FALSE. ! allow multi-dimensional output 
                                                  ! if IO scheme can deal with- e.g. XIOS
+!
+LOGICAL          :: LGRID_MODE         = .FALSE. ! Should we declare fields with 
+                                                 ! a grid rather than with a domain(+axis) 
 !
 !*    Variables
 !     ---------
@@ -96,9 +104,8 @@ REAL             :: XTSTEP_SURF   = 300.   ! time step of the surface
 REAL             :: XTSTEP_OUTPUT = 1800.  ! time step of the output time-series
 INTEGER          :: NB_READ_FORC  = 0      ! subdivisions of the reading of forcings
 !
-!*    Allow the simulation to start from a different time step than the first record of a netcdf file
-!     ----------
-LOGICAL          :: LDELAYEDSTART_NC = .FALSE.
+LOGICAL              :: LDELAYEDSTART_NC = .FALSE. ! Allow the simulation to start from a different time step than the first record of a netcdf file
+!
 INTEGER,DIMENSION(4) :: NDATESTOP=(/0,0,0,0/) ! Year month day time (sec) to stop the simulation before the end of the netcdf forcing file
 !
 !*    General flag for coherence between forcing file orography and surface file orography
@@ -120,16 +127,23 @@ REAL             :: XDELTA_OROG   = 200. ! maximum difference allowed between
 LOGICAL          :: LLIMIT_QAIR = .FALSE. ! .T. : Qair always <= Qsat(Tair)
                                           ! .F. : No limitation
 !
-!*    General flag for using land use scheme
+!*    General flag for Variables for using new forcing interpolation (based on GSWP2 routine)
 !     ----------
 !
-LOGICAL          :: LLAND_USE = .FALSE.
+LOGICAL          :: LNEW_TIME_INTERP_ATM = .FALSE. ! .F. : default
+!                                                  ! .T. : new forcing interpolation
+!
+CHARACTER(LEN=3) :: CTIME_INTERP_PRCP = "DEF" ! OLD = Current value is applied without interpolation
+                                              ! DEF = Current value is average for period ending at current time
+                                              ! PDF = Current value is from a PDF that disagregates in time over the forcing interval
 !
 !*    General flag for using simple coherence between solar zenithal angle and radiation
 !     ----------
 !
 LOGICAL          :: LADAPT_SW = .FALSE.
-LOGICAL          :: LINTERP_SW = .FALSE.
+CHARACTER(LEN=3) :: CINTERP_SW = 'LIN'   ! 'LIN' : linear temporal interpolation of SW forcing
+                                         ! 'OLD' : interpolation using simple       zenithal angle dependancy (old method)
+                                         ! 'ZEN' : interpolation using theroretical zenithal angle dependancy (new method)
 !
 !*    General flag to modify direct solar radiation due to slopes and shadows.
 !     ----------
@@ -147,6 +161,20 @@ REAL            :: XIO_FRAC = 1.          ! fraction of ISIZE deduced to I/O
 !
 CHARACTER(LEN=4) :: YALG_MPI = "LIN "     ! type of distribution algorithm for MPI
 !
+
+LOGICAL         :: LFAGMAP = .FALSE.
+
+! * autorize spectral caculation for snow 
+LOGICAL     :: CSPECSNOW=.FALSE.
+
+! * forcing of impurity deposit coefficients
+LOGICAL     :: LFORCIMP=.FALSE.
+!
+INTEGER     :: NIMPUROF=0  !Number of impurity types in the run, similar to nimpur variable but available in Offline
+!
+! * autorize forcing of total aerosol optical depth and ozone column
+LOGICAL     :: LFORCATMOTARTES=.FALSE.
+!
 !-------------------------------------------------------------------------------
 !
 !*       1.    NAMELISTS
@@ -156,11 +184,14 @@ NAMELIST/NAM_IO_OFFLINE/CSURF_FILETYPE, CTIMESERIES_FILETYPE, CFORCING_FILETYPE,
                         CPGDFILE, CPREPFILE, CSURFFILE, LRESTART_2M,             &
                         LPRINT, LRESTART, LINQUIRE, NSCAL, NHALO,                &
                         XTSTEP_SURF, XTSTEP_OUTPUT, LDIAG_FA_NOCOMPACT,          &
-                        LSET_FORC_ZS, LWRITE_COORD, LOUT_TIMENAME, LLIMIT_QAIR,  &
+                        LSET_FORC_ZS, LWRITE_COORD, LWRITE_TOPO,                 &
+                        LOUT_TIMENAME, LLIMIT_QAIR,                              &
                         LSHADOWS_SLOPE,LSHADOWS_OTHER, LWR_VEGTYPE,              &
-                        NB_READ_FORC, LLAND_USE, NPROMA, NI, NJ, XIO_FRAC,       &
-                        YALG_MPI, XDELTA_OROG, LADAPT_SW, LINTERP_SW,            &
-                        LALLOW_ADD_DIM, LDELAYEDSTART_NC, NDATESTOP
+                        NB_READ_FORC, NPROMA, NI, NJ, XIO_FRAC,                  &
+                        YALG_MPI, XDELTA_OROG, LADAPT_SW, CINTERP_SW, LFAGMAP,   &
+                        LALLOW_ADD_DIM, LDELAYEDSTART_NC, NDATESTOP, CSPECSNOW,  &
+                        LFORCIMP, NIMPUROF, LFORCATMOTARTES, LGRID_MODE,         &
+                        LNEW_TIME_INTERP_ATM, CTIME_INTERP_PRCP                   
 !
 !-------------------------------------------------------------------------------
 END MODULE MODN_IO_OFFLINE

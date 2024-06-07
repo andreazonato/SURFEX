@@ -25,6 +25,7 @@
 !              ------------
 !
 USE MODD_DUMMY_SURF_FIELDS_n, ONLY : DUMMY_SURF_FIELDS_t
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 !
 USE MODI_READ_SURF
 !
@@ -54,7 +55,7 @@ INTEGER           :: JDUMMY         ! loop counter
  CHARACTER(LEN=3  ):: YSTRING03      ! string
 !
 INTEGER           :: IRESP          ! IRESP  : return-code if a problem appears
- CHARACTER(LEN=12) :: YRECFM         ! Name of the article to be read
+ CHARACTER(LEN=LEN_HREC) :: YRECFM         ! Name of the article to be read
  CHARACTER(LEN=100):: YCOMMENT       ! Comment string
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !

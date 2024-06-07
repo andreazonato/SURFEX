@@ -53,6 +53,9 @@
 !!      03/2014: Modif BV : New organisation for first time step (displacement
 !!                          from init_coupl_topd)
 !!      07/2015: Modif BV : modification of recharge computation
+!!      07/2017: Modif BV : change name of variables packed and on full grid
+!!               + computation of runoff by mesh and catchment to avoid problems on catchments interfaces
+!!      07/2022 (B. Decharme) MOD(KSTEP,NFREQ_MAPS_ASAT) crash if NFREQ_MAPS_ASAT==0
 !-------------------------------------------------------------------------------
 !
 !*       0.     DECLARATIONS
@@ -64,21 +67,22 @@ USE MODD_DIAG_EVAP_ISBA_n, ONLY : DIAG_EVAP_ISBA_t
 USE MODD_DIAG_MISC_ISBA_n, ONLY : DIAG_MISC_ISBA_t
 !
 USE MODD_ISBA_OPTIONS_n, ONLY : ISBA_OPTIONS_t
-USE MODD_ISBA_n, ONLY : ISBA_S_t, ISBA_K_t, ISBA_NK_t, ISBA_NP_t, ISBA_NPE_t
+USE MODD_ISBA_n, ONLY : ISBA_S_t, ISBA_K_t, ISBA_NK_t, ISBA_NP_t, ISBA_NPE_t, ISBA_PE_t
 !
 USE MODD_SURF_ATM_GRID_n, ONLY : SURF_ATM_GRID_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 !
 USE MODD_TOPD_PAR, ONLY : NUNIT
-USE MODD_TOPODYN,        ONLY   : NNCAT, NMESHT, NNMC, XMPARA, XDMAXT
-USE MODD_COUPLING_TOPD,  ONLY   : XWG_FULL, XDTOPI, XKAC_PRE, XDTOPT, XWTOPT, XWSTOPT, XAS_NATURE,&
-                                  XKA_PRE, NMASKT, XWSUPSAT,&
-                                  XRUNOFF_TOP, XATOP, XWFCTOPI, NNPIX,&
+USE MODD_TOPODYN,        ONLY   : NNCAT, NMESHT, NNMC, XMPARA, XDMAXT, XQTOT,XQB_RUN,XQB_DR
+USE MODD_COUPLING_TOPD,  ONLY   : XWG_FULL, XDTOPI, XKAC_PRE, XDTOPT, XWTOPT, XWSTOPT, XWWTOPT,&
+                                  XAS_NATURE,&
+                                  XKA_PRE, NMASKT, XWOVSATI_P, XAS_IBV_P,&
+                                  XRUNOFF_IBV_P, XAIBV_F,XATOP, XWFCTOPI, NNPIX,&
                                   XFRAC_D2, XFRAC_D3, XWSTOPI, XDMAXFC, XWFCTOPT, XWGI_FULL,&
                                   NFREQ_MAPS_ASAT, XAVG_RUNOFFCM,&
-                                  XAVG_DRAINCM, LBUDGET_TOPD
-                                  !
-
+                                  XAVG_DRAINCM,XRAINFALLCM,XAVG_HORTCM,&
+                                  LBUDGET_TOPD, LPERT_PARAM, LPERT_INIT,&
+                                  NNBV_IN_MESH,XTOTBV_IN_MESH                                  !
 USE MODD_CSTS,             ONLY : XRHOLW, XRHOLI
 USE MODD_SURF_PAR,         ONLY : XUNDEF, NUNDEF
 USE MODD_ISBA_PAR,         ONLY : XWGMIN
@@ -105,6 +109,8 @@ USE MODI_DISPATCH_WG
 USE MODI_TOPD_TO_DF
 USE MODI_INIT_BUDGET_COUPL_ROUT
 USE MODI_CONTROL_WATER_BUDGET_TOPD
+!
+USE MODE_RANDOM_PERT
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
 USE PARKIND1  ,ONLY : JPRB
@@ -134,6 +140,8 @@ INTEGER, INTENT(IN)          :: KSTEP ! current time step
 !
 !*      0.2    declarations of local variables
 !
+TYPE(ISBA_PE_t), POINTER :: PEK
+!On pixels
 REAL, DIMENSION(NNCAT,NMESHT) :: ZRT             ! recharge on TOP-LAT grid (m)
 REAL, DIMENSION(NNCAT,NMESHT) :: ZDEFT           ! local deficits on TOPODYN grid (m)
 REAL, DIMENSION(NNCAT,NMESHT) :: ZRI_WGIT        ! water changing of phase on TOPMODEL grid
@@ -141,39 +149,52 @@ REAL, DIMENSION(NNCAT,NMESHT) :: ZRUNOFF_TOPD    ! Runoff on the Topodyn grid (m
 REAL, DIMENSION(NNCAT,NMESHT) :: ZDRAIN_TOPD     ! Drainage from Isba on Topodyn grid (m3/s)
 REAL, DIMENSION(NNCAT,NMESHT) :: ZKAPPA          ! topographic index
 REAL, DIMENSION(NNCAT)        :: ZKAPPAC         ! critical topographic index
-REAL, DIMENSION(KI)           :: ZRI             ! recharge on ISBA grid (m)
-REAL, DIMENSION(KI)           :: ZRI_WGI         ! water changing of phase on ISBA grid
-REAL, DIMENSION(KI)           :: ZWM,ZWIM        ! Water content on SurfEx grid after the previous topodyn time step
-REAL, DIMENSION(KI)           :: Z_WSTOPI, Z_WFCTOPI
-REAL, DIMENSION(KI)           :: ZRUNOFFC_FULL   ! Cumulated runoff from isba on the full domain (kg/m2)
-REAL, DIMENSION(KI)           :: ZRUNOFFC_FULLM  ! Cumulated runoff from isba on the full domain (kg/m2) at t-dt
-REAL, DIMENSION(KI)           :: ZRUNOFF_ISBA    ! Runoff from Isba (kg/m2)
-REAL, DIMENSION(KI)           :: ZDRAINC_FULL    ! Cumulated drainage from Isba on the full domain (kg/m2)
-REAL, DIMENSION(KI)           :: ZDRAINC_FULLM   ! Cumulated drainage from Isba on the full domain (kg/m2) at t-dt
-REAL, DIMENSION(KI)           :: ZDRAIN_ISBA     ! Drainage from Isba (m3/s)
-REAL, DIMENSION(KI)           :: ZDG_FULL
-REAL, DIMENSION(KI)           :: ZWG2_FULL, ZWG3_FULL, ZDG2_FULL, ZDG3_FULL
-REAL, DIMENSION(KI)           :: ZWGI_FULL
-REAL, DIMENSION(KI)           :: ZAS             ! Saturated area fraction for each Isba meshes
+!On full grid
+REAL, DIMENSION(U%NDIM_FULL)           :: ZRI             ! recharge on ISBA grid (m)
+REAL, DIMENSION(U%NDIM_FULL)           :: ZRI_WGI         ! water changing of phase on ISBA grid
+REAL, DIMENSION(U%NDIM_FULL)           :: ZWM,ZWIM        ! Water content on SurfEx grid after the previous topodyn time step
+REAL, DIMENSION(U%NDIM_FULL)           :: Z_WSTOPI, Z_WFCTOPI
+REAL, DIMENSION(U%NDIM_FULL)           :: ZRUNOFFC_FULL   ! Cumulated runoff from isba on the full domain (kg/m2)
+REAL, DIMENSION(U%NDIM_FULL)           :: ZRUNOFFC_FULLM  ! Cumulated runoff from isba on the full domain (kg/m2) at t-dt
+REAL, DIMENSION(U%NDIM_FULL)           :: ZRUNOFF_ISBA_F    ! Runoff from Isba (kg/m2)
+REAL, DIMENSION(U%NDIM_FULL)           :: ZDRAINC_FULL    ! Cumulated drainage from Isba on the full domain (kg/m2)
+REAL, DIMENSION(U%NDIM_FULL)           :: ZDRAINC_FULLM   ! Cumulated drainage from Isba on the full domain (kg/m2) at t-dt
+REAL, DIMENSION(U%NDIM_FULL)           :: ZDRAIN_ISBA     ! Drainage from Isba (m3/s)
+REAL, DIMENSION(U%NDIM_FULL)           :: ZDG_FULL
+REAL, DIMENSION(U%NDIM_FULL)           :: ZWG2_FULL, ZWG3_FULL, ZDG2_FULL, ZDG3_FULL
+REAL, DIMENSION(U%NDIM_FULL)           :: ZWGI_FULL !(m3/m3)
+REAL, DIMENSION(U%NDIM_FULL)           :: ZWOVSATI_F !(m3/m3)
+REAL, DIMENSION(U%NDIM_FULL)           :: ZRUNOFFD_F !(kg/m2)
+REAL, DIMENSION(U%NSIZE_NATURE) :: ZRUNOFFD_NAT!(kg/m2)
+REAL, DIMENSION(U%NDIM_FULL)           :: ZASI_F             ! Saturated area fraction for each Isba meshes on full grid
+REAL, DIMENSION(U%NDIM_FULL,NNCAT)     :: ZAS_IBV_F      ! Saturated area fraction for each Isba meshes on catchment on full grid
+REAL, DIMENSION(U%NDIM_FULL,NNCAT)     :: ZRUNOFF_IBV_F    ! Runoff from Isba (kg/m2)
 REAL, DIMENSION(NNCAT)        :: Z_DW1,Z_DW2     ! Wsat-Wfc to actualise M in fonction of WI
 REAL                          :: ZAVG_MESH_SIZE, ZWSATMAX
 LOGICAL, DIMENSION(NNCAT)     :: GTOPD           ! logical variable = true if topodyn_lat runs
 INTEGER                       :: JJ, JI, JL, JP    ! loop control 
 INTEGER                       :: ILUOUT          ! unit number of listing file
-INTEGER                       :: IACT_GROUND_LAYER, IDEPTH, IMASK, ISUM !number of active ground layers
+INTEGER                       :: IACT_GROUND_LAYER, IDEPTH,IMASK, ISUM
 !
-REAL, DIMENSION(U%NSIZE_NATURE,3) :: ZWG_3L,ZWGI_3L,ZDG_3L          
- REAL, DIMENSION(U%NSIZE_NATURE)  :: ZMESH_SIZE, ZWSAT         
+REAL, DIMENSION(U%NDIM_FULL)            :: ZF_PARAM_FULL
+REAL, DIMENSION(NNCAT,NMESHT)  :: ZF_PARAMT
+!On isba grid (packed)
+REAL,    DIMENSION(U%NSIZE_NATURE,3)     :: ZWG_3L,ZWGI_3L,ZDG_3L          
+REAL,    DIMENSION(U%NSIZE_NATURE)       :: ZMESH_SIZE, ZWSAT
 REAL, DIMENSION(U%NSIZE_NATURE,IO%NGROUND_LAYER,IO%NPATCH) :: ZWG_TMP
 REAL, DIMENSION(U%NSIZE_NATURE,IO%NPATCH) :: ZWG, ZDG
-REAL, DIMENSION(KI)            :: ZF_PARAM_FULL
-REAL, DIMENSION(NNCAT,NMESHT)  :: ZF_PARAMT
-!
+REAL,    DIMENSION(U%NSIZE_NATURE,NNCAT) :: ZWOVSAT_IBV_P    ! Temporary variable for runoff from Isba (kg/m2)
+INTEGER, DIMENSION(U%NSIZE_NATURE)       :: INPIXI_P
+INTEGER, DIMENSION(U%NSIZE_NATURE,NNCAT) :: INBV_IN_MESH
 ! Taking several patches into account
-INTEGER, DIMENSION(U%NSIZE_NATURE)         :: INB_ACTIVE_PATCH
-REAL, DIMENSION(U%NSIZE_NATURE):: ZSUMFRD2, ZSUMFRD3
+REAL, DIMENSION(U%NSIZE_NATURE)   :: ZSUMFRD2, ZSUMFRD3
 REAL, DIMENSION(U%NSIZE_NATURE,3) :: ZWG_CTL
- !
+! Perturbating the initial soil moisture field
+REAL, DIMENSION(U%NDIM_FULL) :: ZRAND_MAP
+REAL, DIMENSION(7)  :: ZRANDOM
+!
+LOGICAL                      :: LWORK
+!
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !-------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('COUPL_TOPD',0,ZHOOK_HANDLE)
@@ -183,10 +204,14 @@ CALL GET_LUOUT(HPROGRAM,ILUOUT)
 !
 !*       0.     Initialization:
 !               ---------------
+!Nature grid
 ZWSATMAX=MAXVAL(XWSTOPI,MASK=XWSTOPI/=XUNDEF)
 !
 ZWG_TMP(:,:,:) = 0.
 DO JP = 1,IO%NPATCH
+  !
+  PEK => NPE%AL(JP)
+  !
   DO JJ = 1,NP%AL(JP)%NSIZE_P
     IMASK = NP%AL(JP)%NR_P(JJ)
     NPE%AL(JP)%XWG(JJ,:) = MAX(NPE%AL(JP)%XWG(JJ,:),XWGMIN)
@@ -194,32 +219,26 @@ DO JP = 1,IO%NPATCH
   ENDDO
 ENDDO
 !
-IF (.NOT.ALLOCATED(XWSUPSAT)) ALLOCATE(XWSUPSAT(KI))
-!
-DO JJ=1,U%NSIZE_NATURE
- INB_ACTIVE_PATCH(JJ) = COUNT(S%XPATCH(JJ,:)/=0.)
+DO JJ=1,NNCAT
+ CALL PACK_SAME_RANK(U%NR_NATURE,NNBV_IN_MESH(:,JJ),INBV_IN_MESH(:,JJ))
 ENDDO
 !               ---------------
 IF (IO%CISBA=='DIF') THEN
- CALL DG_DFTO3L(IO, NP, ZDG_3L)
- ZWG_3L(:,2)  = DMI%XFRD2_TWG (:)
- ZWG_3L(:,3)  = DMI%XFRD3_TWG (:)
- ZWGI_3L(:,2) = DMI%XFRD2_TWGI(:)
- ZWGI_3L(:,3) = DMI%XFRD3_TWGI(:)
-
+  CALL DG_DFTO3L(IO, NP, ZDG_3L)
+  ZWG_3L(:,2)  = DMI%XFRD2_TWG (:)
+  ZWG_3L(:,3)  = DMI%XFRD3_TWG (:)
+  ZWGI_3L(:,2) = DMI%XFRD2_TWGI(:)
+  ZWGI_3L(:,3) = DMI%XFRD3_TWGI(:)
 ELSEIF (IO%CISBA=='3-L') THEN
- CALL AVG_PATCH_WG(IO, NP, NPE, ZWG_3L, ZWGI_3L, ZDG_3L)
+  CALL AVG_PATCH_WG(IO, NP, NPE, ZWG_3L, ZWGI_3L, ZDG_3L)
 ENDIF
 !
-ZWM (1:KI) = XWG_FULL (1:KI)
-ZWIM(1:KI) = XWGI_FULL(1:KI)
 !
 !*       1.     ISBA => TOPODYN
 !               ---------------
 !*       1.1    Computation of the useful depth and water for lateral transfers
 !               -----------------------------------
 !
-
 CALL UNPACK_SAME_RANK(U%NR_NATURE,ZDG_3L(:,2),ZDG2_FULL)
 CALL UNPACK_SAME_RANK(U%NR_NATURE,ZDG_3L(:,3),ZDG3_FULL)
 WHERE ( ZDG2_FULL/=XUNDEF )
@@ -231,16 +250,49 @@ END WHERE
 CALL UNPACK_SAME_RANK(U%NR_NATURE,ZWG_3L(:,2),ZWG2_FULL)
 CALL UNPACK_SAME_RANK(U%NR_NATURE,ZWG_3L(:,3),ZWG3_FULL)
 !
-WHERE ( ZDG_FULL/=XUNDEF .AND. ZDG_FULL/=0. )
-  XWG_FULL = XFRAC_D2*(ZDG2_FULL/ZDG_FULL)*ZWG2_FULL + XFRAC_D3*((ZDG3_FULL-ZDG2_FULL)/ZDG_FULL)*ZWG3_FULL
-ELSEWHERE
-  XWG_FULL = XUNDEF
-END WHERE
+IF (KSTEP==1) THEN 
+ ZWM (1:U%NDIM_FULL) = ZWG2_FULL(:)
+ ZWIM(1:U%NDIM_FULL) = 0.0
+ ALLOCATE(XRAINFALLCM(U%NSIZE_NATURE))
+ ALLOCATE(XAVG_HORTCM(U%NSIZE_NATURE))
+ XRAINFALLCM(:)=0.0
+ XAVG_HORTCM(:)=0.0
+ELSE
+ ZWM (1:U%NDIM_FULL) = XWG_FULL(1:U%NDIM_FULL)
+ ZWIM(1:U%NDIM_FULL) = XWGI_FULL(1:U%NDIM_FULL)
+ENDIF
 !
 IF (KSTEP==1) THEN 
-  IF (LBUDGET_TOPD) CALL INIT_BUDGET_COUPL_ROUT(DEC, DC, DMI, PMESH_SIZE, IO, NP, NPE, U, KI)
+CALL UNPACK_SAME_RANK(U%NR_NATURE,ZWG_3L(:,2),XWG_FULL)
+write(*,*)'XWG_FULL TSTP1',SUM(XWG_FULL,MASK=XWG_FULL/=XUNDEF)
+!
+! Full grid
+!
+  IF (LBUDGET_TOPD) CALL INIT_BUDGET_COUPL_ROUT(DEC, DC, DMI, PMESH_SIZE, IO, NP, NPE, U, U%NDIM_FULL)
  CALL ISBA_TO_TOPD(XWG_FULL,XWTOPT)
- WHERE (XWTOPT == XUNDEF) XWTOPT = 0.0
+        !
+ELSEIF (KSTEP==48) THEN 
+        !
+ ZRAND_MAP(:)=1.
+ IF (LPERT_INIT) THEN
+  CALL CREATE_RANDOM_MAP(UG,U,ZRAND_MAP)
+  WRITE(*,*) 'BE CAREFUL PERTURBATION OF INITIAL SWI IS ACTIVATED' 
+  WRITE(*,*) 'THE RANDOM COEFS ARE FROM ', MINVAL(ZRAND_MAP),'FROM ', MAXVAL(ZRAND_MAP) 
+ ENDIF
+  WHERE ( ZDG_FULL/=XUNDEF .AND. ZDG_FULL/=0. )
+   XWG_FULL = (XFRAC_D2*(ZDG2_FULL/ZDG_FULL)*ZWG2_FULL + XFRAC_D3*((ZDG3_FULL-ZDG2_FULL)/ZDG_FULL)*ZWG3_FULL)*ZRAND_MAP
+  ELSEWHERE
+   XWG_FULL = XUNDEF
+  END WHERE
+  CALL ISBA_TO_TOPD(XWG_FULL,XWTOPT)
+ELSE
+ WHERE ( ZDG_FULL/=XUNDEF .AND. ZDG_FULL/=0. .AND.&
+         ZWG2_FULL/=XUNDEF .AND. ZDG2_FULL/=XUNDEF.AND. XFRAC_D2/=XUNDEF)
+  XWG_FULL = (XFRAC_D2*(ZDG2_FULL/ZDG_FULL)*ZWG2_FULL + XFRAC_D3*((ZDG3_FULL-ZDG2_FULL)/ZDG_FULL)*ZWG3_FULL)
+ ELSEWHERE
+  XWG_FULL = XUNDEF
+ END WHERE
+  CALL ISBA_TO_TOPD(XWG_FULL,XWTOPT)
 ENDIF
 !
 !ludo prise en compte glace (pas de glace dans 3e couche)
@@ -256,7 +308,6 @@ WHERE ( (XDTOPI/=XUNDEF).AND.(XWGI_FULL/=XUNDEF).AND.(ZWIM/=XUNDEF))
 ELSEWHERE
   ZRI_WGI = 0.0
 END WHERE
-!CALL UNPACK_SAME_RANK(U%NR_NATURE,DE%XAVG_DWGI(:),ZRI_WGI)
 !
 WHERE ( XDTOPI==XUNDEF ) 
   ZRI_WGI = 0.0
@@ -280,14 +331,13 @@ END WHERE
  CALL ISBA_TO_TOPD(Z_WFCTOPI,XWFCTOPT)
 !
 !ludo test empeche erreur num chgt phase
-WHERE ( ABS(XWSTOPT-XWTOPT) < 0.0000000001 ) XWSTOPT = XWTOPT
+WHERE ( ABS(XWSTOPT-XWTOPT) < 0.0000000001 .AND. XWTOPT/=XUNDEF) XWSTOPT = XWTOPT
 !
-WHERE ( XWTOPT>XWSTOPT ) XWTOPT = XWSTOPT
+WHERE ( XWTOPT>XWSTOPT .AND. XWTOPT/=XUNDEF) XWTOPT = XWSTOPT
 !
 WHERE ( XWFCTOPT/= XUNDEF .AND. XWSTOPT/=XUNDEF .AND. XDTOPT/=XUNDEF)&
                 XDMAXFC = (XWSTOPT - XWFCTOPT) * XDTOPT ! (m)
 XDMAXT=XDMAXFC
-!WHERE ( XDMAXT >=XUNDEF ) XDMAXT=(MAXVAL(Z_WSTOPI)-MAXVAL(Z_WFCTOPI))*MAXVAL(ZDG2_FULL)
 
 !
 !actualisation M
@@ -307,9 +357,11 @@ IF( IO%CKSAT=='EXP' .OR. IO%CKSAT=='SGH' ) THEN
   !
 ELSE
   !
-  DO JJ=1,NNCAT
-    XMPARA(JJ) = SUM( XDMAXFC(JJ,:),MASK=XDMAXFC(JJ,:)/=XUNDEF ) / NNMC(JJ) / 4.
-  ENDDO
+ DO JJ=1,NNCAT
+  ZRANDOM(7)=1.
+  IF (LPERT_PARAM)CALL READ_RANDOM_NUMBER(ZRANDOM)
+  XMPARA(JJ) = (SUM( XDMAXFC(JJ,:),MASK=XDMAXFC(JJ,:)/=XUNDEF )/NNMC(JJ)/4.)*ZRANDOM(7)
+ ENDDO
   !
 ENDIF
 !
@@ -323,14 +375,16 @@ ENDIF
 ! This recharge is computed without regarding the changing of phase of water
 ! and the lateral transfers are performed regarding wsat et Wfc of last time step
 !
-WHERE ( (XDTOPI/=XUNDEF).AND.(XWG_FULL/=XUNDEF).AND.(ZWM/=XUNDEF))
+!Full grid
+!
+WHERE ( (XDTOPI/=XUNDEF).AND.(XWG_FULL/=XUNDEF).AND.(ZWM/=XUNDEF).AND.(ZRI_WGI/=XUNDEF))
   ZRI = ( (XWG_FULL - ZWM)  ) * XDTOPI+ ZRI_WGI
 ELSEWHERE
   ZRI = 0.0
 ENDWHERE
 !
 ! The water recharge on ISBA grid is computed on TOPMODEL grid
-CALL RECHARGE_SURF_TOPD(ZRI,ZRT,KI)
+CALL RECHARGE_SURF_TOPD(ZRI,ZRT,U%NDIM_FULL)
 !
 !*       2.     Lateral distribution
 !               --------------------
@@ -342,28 +396,72 @@ CALL TOPODYN_LAT(ZRT(:,:),ZDEFT(:,:),ZKAPPA(:,:),ZKAPPAC(:),GTOPD)
 !*       2.2    Computation of contributive area on ISBA grid
 !               ----------------------------------------
 !
-CALL SAT_AREA_FRAC(ZDEFT,ZAS,GTOPD)
+ZASI_F(:)=0.
+ZAS_IBV_F(:,:)=0.
+XAS_NATURE(:)=0.
+XAS_IBV_P(:,:)=0.
+CALL SAT_AREA_FRAC(ZDEFT,ZASI_F,ZAS_IBV_F,GTOPD)!work on full grid
 !
-CALL PACK_SAME_RANK(U%NR_NATURE,ZAS,XAS_NATURE)
+!from full to nature grid
+CALL PACK_SAME_RANK(U%NR_NATURE,NNPIX,INPIXI_P)
+CALL PACK_SAME_RANK(U%NR_NATURE,ZASI_F,XAS_NATURE)
+
+DO JJ=1,NNCAT
+ CALL PACK_SAME_RANK(U%NR_NATURE,ZAS_IBV_F(:,JJ),XAS_IBV_P(:,JJ))
+ENDDO
+!
+!*       2.3    Runoff from contributive area on ISBA grid
+!               ----------------------------------------
+!
+XRUNOFF_IBV_P(:,:)=0.
+DO JJ=1,NNCAT
+ DO JI=1,U%NSIZE_NATURE
+  IF (XAS_IBV_P(JI,JJ)/=XUNDEF    .AND. INPIXI_P(JI)/=0. .AND.&
+      INBV_IN_MESH(JI,JJ)/=XUNDEF .AND. INPIXI_P(JI)/=XUNDEF .AND.&
+      DEC%XRAINFALL(JI)/=XUNDEF .AND. XRAINFALLCM(JI)/=XUNDEF .AND.&
+      DEC%XHORT(JI)/=XUNDEF .AND. XAVG_HORTCM(JI)/=XUNDEF) THEN
+          ! kg/m2
+      XRUNOFF_IBV_P(JI,JJ) = MAX(DEC%XRAINFALL(JI)-XRAINFALLCM(JI),0.0) * MAX(XAS_IBV_P(JI,JJ),0.0)+&
+                            (DEC%XHORT(JI)-XAVG_HORTCM(JI))*INBV_IN_MESH(JI,JJ)/INPIXI_P(JI) 
+  ELSE
+ XRUNOFF_IBV_P(JI,JJ) = 0.0
+  ENDIF
+ ENDDO
+ENDDO
+XRAINFALLCM(1:U%NSIZE_NATURE) = DEC%XRAINFALL(1:U%NSIZE_NATURE)
+XAVG_HORTCM(1:U%NSIZE_NATURE) = DEC%XHORT(1:U%NSIZE_NATURE)
 !
 !*       3.    Deficit (m) -> water storage (m3/m3) and changing of phase
 !               ------------------------------------
 !
+! Full grid
 DO JJ=1,NNCAT
-  WHERE ( XDTOPT(JJ,:)/=XUNDEF .AND. XDTOPT(JJ,:)/=0. )
+  WHERE ( XDTOPT(JJ,:)/=XUNDEF .AND. XDTOPT(JJ,:)/=0. .AND. ZDEFT(JJ,:)/=XUNDEF)
     XWTOPT(JJ,:) = XWSTOPT(JJ,:) - ( ZDEFT(JJ,:) / XDTOPT(JJ,:) )      
    !changing phase
     XWTOPT(JJ,:) = XWTOPT(JJ,:) - ZRI_WGIT(JJ,:)
   END WHERE
 ENDDO
-WHERE (XWTOPT > XWSTOPT ) XWTOPT = XWSTOPT
+!'
 !
+!*       3.    Deficit (m) -> water storage (m3/m3) and changing of phase
+!               ------------------------------------
+!
+! Full grid
+DO JJ=1,NNCAT
+  WHERE ( XDTOPT(JJ,:)/=XUNDEF .AND. XDTOPT(JJ,:)/=0. .AND. ZDEFT(JJ,:)/=XUNDEF)
+    XWTOPT(JJ,:) = XWSTOPT(JJ,:) - ( ZDEFT(JJ,:) / XDTOPT(JJ,:) )      
+   !changing phase
+    XWTOPT(JJ,:) = XWTOPT(JJ,:) - ZRI_WGIT(JJ,:)
+  END WHERE
+ENDDO
 !*       4.     TOPODYN => ISBA
 !               ---------------
 !*       4.1    Calculation of water storage on ISBA grid
 !               -----------------------------------------
 !
-CALL TOPD_TO_ISBA(K, UG, U, KI,KSTEP,GTOPD)!=modif of XWG_FULL from XWTOPT
+CALL TOPD_TO_ISBA(K, PEK,UG, U, U%NDIM_FULL,KSTEP,GTOPD)!=modif of XWG_FULL from XWTOPT
+! Nature grid
 CALL PACK_SAME_RANK(U%NR_NATURE, (1-XFRAC_D2)*ZWG2_FULL + XFRAC_D2*XWG_FULL, ZWG_3L(:,2))
 CALL PACK_SAME_RANK(U%NR_NATURE, (1-XFRAC_D3)*ZWG3_FULL + XFRAC_D3*XWG_FULL, ZWG_3L(:,3))
 !
@@ -379,14 +477,6 @@ ELSEIF (IO%CISBA=='3-L') THEN
  CALL DISPATCH_WG(S, NP, NPE, ZWG_3L, ZWGI_3L, ZDG_3L)
 ENDIF
 !
-DO JP = 1,IO%NPATCH
-  WHERE(NPE%AL(JP)%XWG(:,:)>ZWSATMAX.AND.NPE%AL(JP)%XWG(:,:)/=XUNDEF)
-    NPE%AL(JP)%XWG(:,:)=ZWSATMAX
-  ENDWHERE
-  WHERE(NPE%AL(JP)%XWG(:,:)<XWGMIN)
-    NPE%AL(JP)%XWG(:,:)=XWGMIN
-  ENDWHERE
-ENDDO
 !
 IACT_GROUND_LAYER=3
 
@@ -406,8 +496,9 @@ ENDDO
 !
 ENDIF
 !
- CALL PACK_SAME_RANK(U%NR_NATURE,Z_WSTOPI,ZWSAT)
-
+ZWOVSAT_IBV_P(:,:)=0.
+CALL PACK_SAME_RANK(U%NR_NATURE,Z_WSTOPI,ZWSAT)
+!!!!! Budget ctrl on layer 2
 ZWG(:,:) = 0.
 ZDG(:,:) = 0.
 DO JP = 1,IO%NPATCH
@@ -418,13 +509,15 @@ DO JP = 1,IO%NPATCH
   ENDDO
 ENDDO
 CALL CONTROL_WATER_BUDGET_TOPD(IO, S, U, ZWG_TMP(:,2,:), ZWG, ZDG,&
-                               ZMESH_SIZE,ZAVG_MESH_SIZE,ZWSAT(:))
+           ZMESH_SIZE,ZAVG_MESH_SIZE,ZWSAT(:),ZWOVSAT_IBV_P(:,:))
 DO JP = 1,IO%NPATCH
   DO JJ = 1,NP%AL(JP)%NSIZE_P
     IMASK = NP%AL(JP)%NR_P(JJ)
     NPE%AL(JP)%XWG(JJ,2) = ZWG(IMASK,JP)
   ENDDO
 ENDDO   
+!
+!!!!! Budget ctrl on layer JL 
 DO JL = 3,IACT_GROUND_LAYER
   ZWG(:,:) = 0.
   ZDG(:,:) = 0.
@@ -436,7 +529,7 @@ DO JL = 3,IACT_GROUND_LAYER
     ENDDO
   ENDDO
  CALL CONTROL_WATER_BUDGET_TOPD(IO, S, U, ZWG_TMP(:,JL,:), ZWG, ZDG, &
-                                ZMESH_SIZE,ZAVG_MESH_SIZE,ZWSAT(:))
+           ZMESH_SIZE,ZAVG_MESH_SIZE,ZWSAT(:),ZWOVSAT_IBV_P(:,:))
   DO JP = 1,IO%NPATCH
     DO JJ = 1,NP%AL(JP)%NSIZE_P
       IMASK = NP%AL(JP)%NR_P(JJ)
@@ -455,32 +548,53 @@ DO JP = 1,IO%NPATCH
   ENDWHERE
 ENDDO
 !
+!
 !*      5.0    Total discharge
 !              ---------------
 !
 !*      5.1    Total water for runoff on TOPODYN grid
 !              ---------------------------------------
 !
-!In XAVG_RUNOFFC, the paches have been averaged
-CALL UNPACK_SAME_RANK(U%NR_NATURE,DEC%XRUNOFF,ZRUNOFFC_FULL)
-CALL UNPACK_SAME_RANK(U%NR_NATURE,XAVG_RUNOFFCM,ZRUNOFFC_FULLM)
 !
-CALL DIAG_ISBA_TO_ROUT(UG%G%XMESH_SIZE,ZRUNOFFC_FULL,ZRUNOFFC_FULLM,ZRUNOFF_ISBA)
+! Full grid
 !
-XAVG_RUNOFFCM(:) = DEC%XRUNOFF(:)
+ZWOVSATI_F(:)=0.
+XWOVSATI_P(:)=XWOVSATI_P(:)
+CALL UNPACK_SAME_RANK(U%NR_NATURE,XWOVSATI_P(:),ZWOVSATI_F(:))!from isba grid to full grid
+ CALL UNPACK_SAME_RANK(NP%AL(1)%NR_P,NP%AL(1)%XRUNOFFD(:),ZRUNOFFD_NAT)
+ CALL UNPACK_SAME_RANK(U%NR_NATURE,ZRUNOFFD_NAT,ZRUNOFFD_F)!from isba grid to full grid
+
+ZRUNOFF_IBV_F(:,:)=0.
+DO JJ=1,NNCAT
+  XRUNOFF_IBV_P(:,JJ)=XRUNOFF_IBV_P(:,JJ)+ZWOVSAT_IBV_P(:,JJ)*ZRUNOFFD_NAT(:)*XRHOLW !isba grid !kg/m2
+  CALL UNPACK_SAME_RANK(U%NR_NATURE,XRUNOFF_IBV_P(:,JJ),ZRUNOFF_IBV_F(:,JJ))! from isba grid to full grid
 !
-WHERE (ZRUNOFF_ISBA==XUNDEF) ZRUNOFF_ISBA = 0.
+ DO JI=1,U%NDIM_FULL! full_grid
+   IF(ZWOVSATI_F(JI)/=XUNDEF.AND.XAIBV_F(JI,JJ)/=XUNDEF.AND.ZWOVSATI_F(JI)>=0.)THEN
+   ZRUNOFF_IBV_F(JI,JJ)=ZRUNOFF_IBV_F(JI,JJ)+ZWOVSATI_F(JI)* XAIBV_F(JI,JJ)*ZRUNOFFD_F(JI)*XRHOLW!kg/m2
+
+   ENDIF
+ ENDDO
+ENDDO
 !
-ZRUNOFF_TOPD(:,:) = 0
 !
-CALL ISBA_TO_TOPDSAT(XKA_PRE,XKAC_PRE,KI,ZRUNOFF_ISBA,ZRUNOFF_TOPD)
+ZRUNOFF_TOPD(:,:) = 0.0
+!
+!
+DO JJ=1,NNCAT
+ WHERE (ZRUNOFF_IBV_F(:,JJ)/=XUNDEF.AND.UG%G%XMESH_SIZE(:)/=XUNDEF)
+  ZRUNOFF_IBV_F(:,JJ)=ZRUNOFF_IBV_F(:,JJ)*UG%G%XMESH_SIZE(:)/XRHOLW/3600.!! from kg/m2 to m3/s
+ ENDWHERE
+ENDDO
+CALL ISBA_TO_TOPDSAT(XKA_PRE,XKAC_PRE,U%NDIM_FULL,ZRUNOFF_IBV_F,ZRUNOFF_TOPD)
+!
 !
 !
 !*      5.2    Total water for drainage on TOPODYN grid
 !              ----------------------------------------
 !In XAVG_DRAINC, the paches have been average
-CALL UNPACK_SAME_RANK(U%NR_NATURE,DEC%XDRAIN*XATOP,ZDRAINC_FULL)
-CALL UNPACK_SAME_RANK(U%NR_NATURE,XAVG_DRAINCM*XATOP,ZDRAINC_FULLM)
+CALL UNPACK_SAME_RANK(U%NR_NATURE,DEC%XDRAIN,ZDRAINC_FULL)
+CALL UNPACK_SAME_RANK(U%NR_NATURE,XAVG_DRAINCM,ZDRAINC_FULLM)
 !
 CALL DIAG_ISBA_TO_ROUT(UG%G%XMESH_SIZE,ZDRAINC_FULL,ZDRAINC_FULLM,ZDRAIN_ISBA)
 !
@@ -489,6 +603,7 @@ WHERE (ZDRAIN_ISBA==XUNDEF) ZDRAIN_ISBA=0.
 XAVG_DRAINCM(:)  = DEC%XDRAIN(:)
 !
 ZDRAIN_TOPD(:,:) = 0.0
+ZDRAIN_ISBA=ZDRAIN_ISBA*XATOP
 !
 CALL ISBA_TO_TOPD(ZDRAIN_ISBA,ZDRAIN_TOPD)
 !
@@ -505,13 +620,22 @@ CALL ROUTING(ZRUNOFF_TOPD,ZDRAIN_TOPD,KSTEP)
 !
 XKA_PRE(:,:) = ZKAPPA(:,:)
 XKAC_PRE(:) = ZKAPPAC(:)
-!
-!*      7.0    Writing results in map files
+!!
+!*      7.0    Computing Alert levels
+!              ----------------------------
+
+!*      8.0    Writing results in map files
 !              ----------------------------
 !
-IF (NFREQ_MAPS_ASAT/=0.AND.MOD(KSTEP,NFREQ_MAPS_ASAT)==0) THEN
+LWORK=.FALSE.
+IF (NFREQ_MAPS_ASAT/=0) THEN
+   LWORK=MOD(KSTEP,NFREQ_MAPS_ASAT)==0
+ENDIF
+!
+IF (LWORK) THEN
   CALL OPEN_FILE('ASCII ',NUNIT,HFILE='carte_surfcont'//HSTEP,HFORM='FORMATTED',HACTION='WRITE')
-  CALL WRITE_FILE_ISBAMAP(UG,NUNIT,ZAS,KI)
+  CALL WRITE_FILE_ISBAMAP(UG, &
+                          NUNIT,ZASI_F,U%NDIM_FULL)
   CALL CLOSE_FILE('ASCII ',NUNIT)
 ENDIF
 !

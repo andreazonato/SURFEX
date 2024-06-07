@@ -4,7 +4,7 @@
 !SFX_LIC for details. version 1.
 ! *****************************************************************************************
 PROGRAM SODA
-
+!
 #ifdef USE_SODA
 !
 ! ------------------------------------------------------------------------------------------
@@ -43,6 +43,7 @@ PROGRAM SODA
 !  05/2013 B. Decharme New coupling variables XTSURF (for AGCM)
 !  02/2016 B. Decharme MODD_IO_SURF_ARO not used
 !  09/2016 S. Munier XTSTEP_OUTPUT set to 0
+!  08/2016 R. Séférian modification of landuse implementation
 !----------------------------------------------------------------------------
 !
 USE MODD_ISBA_n, ONLY : ISBA_P_t, ISBA_PE_t
@@ -51,7 +52,7 @@ USE MODD_OFF_SURFEX_n
 USE MODE_MODELN_SURFEX_HANDLER
 !
 USE MODD_SURFEX_MPI, ONLY : NRANK, NPIO, WLOG_MPI, PREP_LOG_MPI, NPROC, NCOMM,   &
-                            NINDEX, NSIZE_TASK, END_LOG_MPI, NSIZE
+                            NINDEX, NSIZE_TASK, END_LOG_MPI
 !
 USE MODD_MASK, ONLY: NMASK_FULL
 !
@@ -61,18 +62,18 @@ USE MODD_WRITE_SURF_ATM, ONLY : LFIRST_WRITE, NCPT_WRITE
 !
 USE MODD_SURF_CONF, ONLY : CPROGNAME, CSOFTWARE
 USE MODD_SURF_PAR,  ONLY : XUNDEF,NUNDEF
+USE MODD_PREP_SNOW,  ONLY : NIMPUR
 !
 USE MODD_ASSIM, ONLY : LASSIM, LAROME, LALADSURF, CASSIM_ISBA, NVAR, XF, XF_PATCH,  &
-                       NOBSTYPE, XAT2M_ISBA, XAHU2M_ISBA, CVAR, COBS, NECHGU, XI,   &
-                       XLAI_PASS, XBIO_PASS, CBIO, NIVAR, XYO, NIFIC, NPRINTLEV,    &
+                       NOBSTYPE, XAT2M_ISBA, XAHU2M_ISBA, CVAR, COBS, XI,   &
+                       XLAI_PASS, XBIO_PASS, CBIO, XYO, NIFIC, NPRINTLEV,    &
                        NOBS, NPRINTLEV, LREAD_ALL, NENS,LBIAS_CORRECTION,           &
                        LEXTRAP_SEA,LEXTRAP_WATER,LEXTRAP_NATURE,LOBSHEADER,NOBSMAX, &
                        CFILE_FORMAT_FG,CFILE_FORMAT_LSM,CFILE_FORMAT_OBS,           &
-                       CFILE_FORMAT_CLIM,NNCO,LWATERTG2,LOBSNAT
+                       CFILE_FORMAT_CLIM,LWATERTG2,LOBSNAT
 !
-USE MODD_FORC_ATM,       ONLY : CSV, XDIR_ALB, XSCA_ALB, XEMIS, XTSRAD, XTSUN, XZS, &
-                                XZREF, XUREF, XTA, XQA, XSV, XU, XV, XSW_BANDS,     &
-                                XZENITH, XAZIM, XCO2, XRHOA, XTSURF
+USE MODD_FORC_ATM,       ONLY : CSV, XDIR_ALB, XSCA_ALB, XEMIS, XTSRAD, &
+                               XSW_BANDS, XZENITH, XAZIM, XCO2,XIMPWET,XIMPDRY, XRHOA, XTSURF
 !
 USE MODD_WRITE_BIN,  ONLY : NWRITE
 !
@@ -98,8 +99,10 @@ USE MODD_IO_SURF_LFI,    ONLY : CFILEIN_LFI, CFILEIN_LFI_SAVE, &
                                 CFILEPGD_LFI, CFILE_LFI, CLUOUT_LFI, CFILEOUT_LFI 
 #endif
 !
+USE MODD_SURF_ATM_TURB_n, ONLY : SURF_ATM_TURB_t
+!
 USE MODN_IO_OFFLINE,     ONLY : NAM_IO_OFFLINE, CNAMELIST, CPGDFILE, CPREPFILE, CSURFFILE, &
-                                CSURF_FILETYPE, CTIMESERIES_FILETYPE, LLAND_USE, YALG_MPI, &
+                                CSURF_FILETYPE, CTIMESERIES_FILETYPE, YALG_MPI,            &
                                 LDIAG_FA_NOCOMPACT, LOUT_TIMENAME, XIO_FRAC, LRESTART_2M,  &
                                 XTSTEP_OUTPUT
 !
@@ -184,7 +187,6 @@ REAL,ALLOCATABLE, DIMENSION(:)   :: ZTSC                ! Climatological surface
 REAL,ALLOCATABLE, DIMENSION(:)   :: ZTS                 ! Surface temperature
 REAL,ALLOCATABLE, DIMENSION(:)   :: ZT2M                ! Screen level temperature
 REAL,ALLOCATABLE, DIMENSION(:)   :: ZHU2M               ! Screen level relative humidity
-REAL,ALLOCATABLE, DIMENSION(:)   :: ZSNC
 REAL,ALLOCATABLE, DIMENSION(:)   :: ZSWE                ! Snow water equvivalent (amount of snow on the ground)
 REAL,ALLOCATABLE, DIMENSION(:)   :: ZSWEC               ! Climatological snow water equvivalent (amount of snow on the ground)
 REAL,ALLOCATABLE, DIMENSION(:)   :: ZUCLS
@@ -213,12 +215,10 @@ INTEGER :: IYEAR, IMONTH, IDAY, IHOUR
 INTEGER :: IYEAR_OUT, IMONTH_OUT, IDAY_OUT
 INTEGER :: JL,JI,JJ,JP,INB,ICPT, IMASK
 INTEGER :: INW, JNW
-INTEGER :: ISTEP
 INTEGER :: IOBS
-INTEGER :: IGPCOMP
 INTEGER :: ILUOUT
 INTEGER :: ILUNAM
-INTEGER :: IRET, INBFA
+INTEGER :: IRET
 INTEGER :: IRESP, ISTAT               ! Response value
 INTEGER :: INFOMPI, ILEVEL
 INTEGER :: ISIZE, IENS, ISIZE_FULL
@@ -229,9 +229,12 @@ INTEGER :: ISIZE_NATURE, INPATCH
 !
 INTEGER :: I2M, IBEQ, IDSTEQ
 LOGICAL :: GFRAC, GDIAG_GRID, GSURF_BUDGET, GRAD_BUDGET, GCOEF,    &
-           GSURF_VARS, GDIAG_OCEAN, GDIAG_SEAICE, GWATER_PROFILE,  &
+           GSURF_VARS, GDIAG_OCEAN, GDIAG_SEAICE, GWATER_PROFILE, &
            GSURF_EVAP_BUDGET, GFLOOD,  GPGD_ISBA, GCH_NO_FLUX_ISBA,&
-           GSURF_MISC_BUDGET_ISBA, GPGD_TEB, GSURF_MISC_BUDGET_TEB
+           GSURF_MISC_BUDGET_ISBA, GPGD_TEB, GSURF_MISC_BUDGET_TEB,&
+           GSURF_LUTILES
+!
+TYPE(SURF_ATM_TURB_t) :: AT         ! atmospheric turbulence parameters
 !
 REAL(KIND=JPRB)                  :: ZHOOK_HANDLE
 ! ******************************************************************************************
@@ -374,13 +377,15 @@ IF (ALLOCATED(NMASK_FULL)) DEALLOCATE(NMASK_FULL)
 ISV = 0
 ALLOCATE(CSV(ISV))
 !
-ALLOCATE(XCO2     (ISIZE_FULL))
-ALLOCATE(XRHOA    (ISIZE_FULL))
-ALLOCATE(XZENITH  (ISIZE_FULL))
-ALLOCATE(XAZIM    (ISIZE_FULL))
-ALLOCATE(XEMIS    (ISIZE_FULL))
-ALLOCATE(XTSRAD   (ISIZE_FULL))
-ALLOCATE(XTSURF   (ISIZE_FULL))
+ALLOCATE(XCO2(ISIZE_FULL))
+ALLOCATE(XIMPWET(ISIZE_FULL,NIMPUR))
+ALLOCATE(XIMPDRY(ISIZE_FULL,NIMPUR))
+ALLOCATE(XRHOA(ISIZE_FULL))
+ALLOCATE(XZENITH(ISIZE_FULL))
+ALLOCATE(XAZIM(ISIZE_FULL))
+ALLOCATE(XEMIS(ISIZE_FULL))
+ALLOCATE(XTSRAD(ISIZE_FULL))
+ALLOCATE(XTSURF(ISIZE_FULL))
 !
 ISW = 0
 ALLOCATE(XSW_BANDS(           ISW))
@@ -392,6 +397,8 @@ XZENITH = XUNDEF
 XAZIM   = XUNDEF
 XCO2    = 0.
 XRHOA   = 1.
+XIMPWET=XUNDEF
+XIMPDRY=XUNDEF
 !
 ! Sanity check
 IF ( .NOT. LASSIM ) CALL ABOR1_SFX("YOU CAN'T RUN SODA WITHOUT SETTING LASSIM=.TRUE. IN THE ASSIM NAMELIST")
@@ -461,10 +468,11 @@ DO NIFIC = INB,1,-1
   !    
   ! Initialize the SURFEX interface
   CALL IO_BUFF_CLEAN
-  CALL INIT_SURF_ATM_n(YSC, CSURF_FILETYPE,YINIT, LLAND_USE, ISIZE_FULL, ISV, ISW,      &
-                       CSV, XCO2, XRHOA, XZENITH, XAZIM, XSW_BANDS, XDIR_ALB, XSCA_ALB, &
-                       XEMIS, XTSRAD, XTSURF, IYEAR, IMONTH, IDAY, ZTIME, TDATE_END,    &
-                       YATMFILE, YATMFILETYPE, YTEST  )
+  CALL INIT_SURF_ATM_n(YSC, CSURF_FILETYPE, YINIT, ISIZE_FULL, ISV, ISW,               &
+                       CSV, XCO2, XRHOA, XZENITH, XAZIM, XSW_BANDS,  &
+                       XDIR_ALB, XSCA_ALB,XEMIS, XTSRAD, XTSURF, IYEAR, IMONTH, IDAY,  &
+                       ZTIME, TDATE_END, AT, YATMFILE, YATMFILETYPE, YTEST   )
+                       
   !
   IF ( CASSIM_ISBA=='EKF  ' .OR. CASSIM_ISBA=='ENKF ' ) THEN
     !
@@ -939,8 +947,8 @@ IF ( TRIM(CFILE_FORMAT_OBS) == "ASCII") THEN
           ZHU2M(:)=ZWORK(:,JJ)
         CASE ("SWE")
           ZSWE(:)=ZWORK(:,JJ)
-       END SELECT
-     ENDDO
+      END SELECT
+    ENDDO
   ENDIF
   DEALLOCATE(ZWORK)
 
@@ -1177,15 +1185,16 @@ DO IENS = 1,ISIZE
     !
     ! Initialize the SURFEX interface
     CALL IO_BUFF_CLEAN
-    CALL INIT_SURF_ATM_n(YSC, CSURF_FILETYPE,YINIT, LLAND_USE, ISIZE_FULL, ISV, ISW,      &
-                         CSV, XCO2, XRHOA, XZENITH, XAZIM, XSW_BANDS, XDIR_ALB, XSCA_ALB, &
-                         XEMIS, XTSRAD, XTSURF, IYEAR, IMONTH, IDAY, ZTIME, TDATE_END,    &
-                         YATMFILE, YATMFILETYPE, YTEST              )
+    CALL INIT_SURF_ATM_n(YSC, CSURF_FILETYPE,YINIT, ISIZE_FULL, ISV, ISW,                 &
+                         CSV, XCO2, XRHOA, XZENITH, XAZIM, XSW_BANDS,    &
+                         XDIR_ALB, XSCA_ALB, XEMIS, XTSRAD, XTSURF, IYEAR, IMONTH, IDAY,  &
+                         ZTIME, TDATE_END, AT, YATMFILE, YATMFILETYPE, YTEST  )
+                          
     !
     DO JP = 1,INPATCH
       PK => YSC%IM%NP%AL(JP)
       PEK => YSC%IM%NPE%AL(JP)  
-
+      !
       DO JL=1,NVAR
         DO JI = 1,PK%NSIZE_P
           IMASK = PK%NR_P(JI) 
@@ -1239,13 +1248,13 @@ DO IENS = 1,ISIZE
   IF (CTIMESERIES_FILETYPE=="OFFLIN") THEN
     CALL INIT_OUTPUT_OL_n (YSC)
   ENDIF
-  !  
+  !
   INW = 1
   IF (CTIMESERIES_FILETYPE=="NC    ".OR.CTIMESERIES_FILETYPE=="OFFLIN") INW = 2
   !
   DO JNW = 1,INW
     CALL IO_BUFF_CLEAN
-    CALL WRITE_SURF_ATM_n(YSC, CTIMESERIES_FILETYPE,'ALL',LLAND_USE)
+    CALL WRITE_SURF_ATM_n(YSC, CTIMESERIES_FILETYPE,'ALL')
     CALL WRITE_DIAG_SURF_ATM_n(YSC, CTIMESERIES_FILETYPE,'ALL')
 #ifdef SFX_NC
     LDEF_nc = .FALSE.
@@ -1257,7 +1266,7 @@ DO IENS = 1,ISIZE
     LFIRST_WRITE = .FALSE.
   ENDDO
   !
-  CALL FLAG_UPDATE(YSC%IM%ID%O, YSC%DUO,.FALSE.,.TRUE.,.FALSE.,.FALSE.)
+  CALL FLAG_UPDATE(YSC%IM%ID%O, YSC%DUO,.FALSE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.)
   !
   IF (LRESTART_2M) THEN
     I2M       = 1
@@ -1269,6 +1278,7 @@ DO IENS = 1,ISIZE
   GFRAC                  = .TRUE.  
   GDIAG_GRID             = .TRUE.
   GSURF_BUDGET           = .FALSE.
+  GSURF_LUTILES          = .FALSE.
   GRAD_BUDGET            = .FALSE.
   GCOEF                  = .FALSE.
   GSURF_VARS             = .FALSE.
@@ -1290,7 +1300,7 @@ DO IENS = 1,ISIZE
                         GSURF_VARS, IBEQ, IDSTEQ, GDIAG_OCEAN, GDIAG_SEAICE,      &
                         GWATER_PROFILE, GSURF_EVAP_BUDGET, GFLOOD,  GPGD_ISBA,    &
                         GCH_NO_FLUX_ISBA, GSURF_MISC_BUDGET_ISBA, GPGD_TEB,       &
-                        GSURF_MISC_BUDGET_TEB    )
+                        GSURF_MISC_BUDGET_TEB, GSURF_LUTILES    )
   ! 
   YSC%DUO%LSNOWDIMNC = .FALSE.
   !
@@ -1340,7 +1350,7 @@ DO IENS = 1,ISIZE
     CALL IO_BUFF_CLEAN
     !  
     ! Store results from assimilation
-    CALL WRITE_SURF_ATM_n(YSC, CSURF_FILETYPE,'ALL',LLAND_USE)
+    CALL WRITE_SURF_ATM_n(YSC, CSURF_FILETYPE,'ALL')
     !IF (YSC%DUO%LREAD_BUDGETC.AND..NOT.YSC%IM%ID%O%LRESET_BUDGETC) THEN
       CALL WRITE_DIAG_SURF_ATM_n(YSC, CSURF_FILETYPE,'ALL')
     !ENDIF

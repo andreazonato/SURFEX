@@ -30,9 +30,9 @@
 !*       0.   DECLARATIONS
 !
 !
+USE MODD_SURF_PAR, ONLY : LEN_HREC
 IMPLICIT NONE
-
- CHARACTER(LEN=12), DIMENSION(50000) :: CREC   ! list of records already read/written
+ CHARACTER(LEN=LEN_HREC), DIMENSION(50000) :: CREC   ! list of records already read/written
 INTEGER                            :: NREC   ! number of records read/written
 
 !

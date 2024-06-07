@@ -3,13 +3,16 @@
 !SFX_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !SFX_LIC for details. version 1.
 !     #########
-SUBROUTINE PUT_SFXCPL_n (F, IM, S, U, W, &
+SUBROUTINE PUT_SFXCPL_n (F, IM, S, U, W, TM, GDM, GRM, &
                          HPROGRAM,KI,KSW,PSW_BANDS,PZENITH, &
                         PLAND_WTD,PLAND_FWTD,PLAND_FFLOOD, &
                         PLAND_PIFLOOD,PSEA_SST,PSEA_UCU,   &
-                        PSEA_VCU,PSEAICE_SIT,PSEAICE_CVR,  &
+                        PSEA_VCU,PSEA_FCO2,                &
+                        PSEAICE_SIT,PSEAICE_CVR,           &
                         PSEAICE_ALB,PTSRAD,                &
-                        PDIR_ALB,PSCA_ALB,PEMIS,PTSURF     )  
+                        PDIR_ALB,PSCA_ALB,PEMIS,PTSURF,    & 
+                        PWAVE_CHA,PWAVE_UCU,PWAVE_VCU,     &
+                        PWAVE_HS,PWAVE_TP     )  
 !     #################################################################################################
 !
 !!****  *PUT_SFXCPL_n* - routine to modify some variables in surfex from information coming
@@ -40,29 +43,35 @@ SUBROUTINE PUT_SFXCPL_n (F, IM, S, U, W, &
 !!    MODIFICATIONS
 !!    -------------
 !!      Original    08/2009
+!!      Modified       11/2014 : J. Pianezze - add wave coupling parameters
+!!      A. Voldoire 09/2016 : Switch to tile the fluxes calculation over sea and seaice
+!!      R. Séférian    11/16 : Implement carbon cycle coupling (Earth system model)
 !-------------------------------------------------------------------------------
 !
 !*       0.    DECLARATIONS
 !              ------------
 !
 USE MODD_FLAKE_n, ONLY : FLAKE_t
-USE MODD_SURFEX_n, ONLY : ISBA_MODEL_t
+USE MODD_SURFEX_n, ONLY : ISBA_MODEL_t, TEB_MODEL_t, &
+                          TEB_GARDEN_MODEL_t,TEB_GREENROOF_MODEL_t
 USE MODD_SEAFLUX_n, ONLY : SEAFLUX_t
 USE MODD_SURF_ATM_n, ONLY : SURF_ATM_t
 USE MODD_WATFLUX_n, ONLY : WATFLUX_t
 !
 USE MODD_SURF_PAR,   ONLY : XUNDEF
 !
-USE MODN_SFX_OASIS,  ONLY : LWATER
-USE MODD_SFX_OASIS,  ONLY : LCPL_SEA, LCPL_SEAICE, &
-                            LCPL_LAND, LCPL_GW,    &
-                            LCPL_FLOOD
+USE MODN_SFX_OASIS,  ONLY : LWATER, LSEAICE_2FLX
+USE MODD_SFX_OASIS,  ONLY : LCPL_SEA, LCPL_SEAICE,  &
+                            LCPL_LAND, LCPL_GW,     &
+                            LCPL_FLOOD,LCPL_SEACARB,&
+                            LCPL_WAVE
 !                          
 USE MODI_GET_LUOUT
 !
 USE MODI_ABOR1_SFX
 USE MODI_PUT_SFX_LAND
 USE MODI_PUT_SFX_SEA
+USE MODI_PUT_SFX_WAVE
 USE MODI_UPDATE_ESM_SURF_ATM_n
 !
 USE YOMHOOK   ,ONLY : LHOOK,   DR_HOOK
@@ -79,6 +88,9 @@ TYPE(ISBA_MODEL_t), INTENT(INOUT) :: IM
 TYPE(SEAFLUX_t), INTENT(INOUT) :: S
 TYPE(SURF_ATM_t), INTENT(INOUT) :: U
 TYPE(WATFLUX_t), INTENT(INOUT) :: W
+TYPE(TEB_MODEL_t),        INTENT(INOUT) :: TM
+TYPE(TEB_GARDEN_MODEL_t), INTENT(INOUT) :: GDM
+TYPE(TEB_GREENROOF_MODEL_t), INTENT(INOUT) :: GRM
 !
 CHARACTER(LEN=6),        INTENT(IN)  :: HPROGRAM
 INTEGER,                 INTENT(IN)  :: KI      ! number of points
@@ -100,6 +112,14 @@ REAL, DIMENSION(KI),      INTENT(IN) :: PSEAICE_SIT ! Sea-ice Temperature (K)
 REAL, DIMENSION(KI),      INTENT(IN) :: PSEAICE_CVR ! Sea-ice cover (-)
 REAL, DIMENSION(KI),      INTENT(IN) :: PSEAICE_ALB ! Sea-ice albedo (-)
 !
+REAL, DIMENSION(KI),      INTENT(IN) :: PSEA_FCO2 ! Ocean carbon flux (molC/m2/s from PISCES)
+!
+REAL, DIMENSION(KI),      INTENT(IN) :: PWAVE_CHA ! Charnock coefficient (-)
+REAL, DIMENSION(KI),      INTENT(IN) :: PWAVE_UCU ! u-current velocity   (m/s)
+REAL, DIMENSION(KI),      INTENT(IN) :: PWAVE_VCU ! v-current velocity   (m/s)
+REAL, DIMENSION(KI),      INTENT(IN) :: PWAVE_HS  ! Significant wave height (m)
+REAL, DIMENSION(KI),      INTENT(IN) :: PWAVE_TP  ! Peak period (s)
+!
 REAL, DIMENSION(KI),     INTENT(OUT) :: PTSRAD   ! Total radiative temperature see by the atmosphere
 REAL, DIMENSION(KI),     INTENT(OUT) :: PTSURF   ! Total surface temperature see by the atmosphere
 REAL, DIMENSION(KI),     INTENT(OUT) :: PEMIS    ! Total emissivity see by the atmosphere
@@ -110,14 +130,19 @@ REAL, DIMENSION(KI,KSW), INTENT(OUT) :: PSCA_ALB ! Total diffus albedo see by th
 !*       0.2   Declarations of local variables
 !              -------------------------------
 !
+REAL, DIMENSION(KI) :: ZLAND_TWS
 !
-INTEGER :: ILU, ILUOUT
+INTEGER         :: ILU, ILUOUT
+!
 REAL(KIND=JPRB) :: ZHOOK_HANDLE
 !
 !-------------------------------------------------------------------------------
 IF (LHOOK) CALL DR_HOOK('PUT_SFXCL_N',0,ZHOOK_HANDLE)
 !
 CALL GET_LUOUT(HPROGRAM,ILUOUT)
+!
+ZLAND_TWS(:) = 0.0
+!
 !-------------------------------------------------------------------------------
 !
 ! Global argument
@@ -133,8 +158,9 @@ ENDIF
 !-------------------------------------------------------------------------------
 !
 IF(LCPL_LAND)THEN
-  CALL PUT_SFX_LAND(IM%O, IM%S, IM%K, IM%NK, IM%NP, U, ILUOUT, LCPL_GW, LCPL_FLOOD, &
-                    PLAND_WTD(:), PLAND_FWTD(:),PLAND_FFLOOD(:),PLAND_PIFLOOD(:))        
+  CALL PUT_SFX_LAND(IM%O, IM%S, IM%K, IM%NK, IM%NP, U, ILUOUT, LCPL_GW, LCPL_FLOOD,&
+                    PLAND_WTD(:), PLAND_FWTD(:),PLAND_FFLOOD(:),PLAND_PIFLOOD(:),  &
+                    ZLAND_TWS(:)                                                   )
 ENDIF
 !
 !-------------------------------------------------------------------------------
@@ -143,8 +169,20 @@ ENDIF
 !
 IF(LCPL_SEA)THEN
 !
-  CALL PUT_SFX_SEA(S, U, W, ILUOUT,LCPL_SEAICE,LWATER,PSEA_SST(:),PSEA_UCU(:), &
-                   PSEA_VCU(:),PSEAICE_SIT(:),PSEAICE_CVR(:),PSEAICE_ALB(:) )
+  CALL PUT_SFX_SEA(S, U, W, ILUOUT,LCPL_SEAICE,LWATER,LCPL_SEACARB,LSEAICE_2FLX,   &
+                   PSEA_SST(:),PSEA_UCU(:),PSEA_VCU(:),PSEA_FCO2(:),PSEAICE_SIT(:),&
+                   PSEAICE_CVR(:),PSEAICE_ALB(:) )
+!
+ENDIF
+!
+!-------------------------------------------------------------------------------
+! Put variable over sea and/or water tile for waves
+!-------------------------------------------------------------------------------
+!
+IF(LCPL_WAVE)THEN
+!
+  CALL PUT_SFX_WAVE(S, U, &
+                    ILUOUT,PWAVE_CHA(:),PWAVE_UCU(:),PWAVE_VCU(:),PWAVE_HS(:),PWAVE_TP(:) )
 !
 ENDIF
 !
@@ -153,8 +191,8 @@ ENDIF
 !-------------------------------------------------------------------------------
 !
 IF(LCPL_SEA.OR.LCPL_FLOOD)THEN
-  CALL UPDATE_ESM_SURF_ATM_n(F, IM, S, U, W, HPROGRAM, KI, KSW, PZENITH, PSW_BANDS,  &
-                             PTSRAD, PDIR_ALB, PSCA_ALB, PEMIS, PTSURF )
+  CALL UPDATE_ESM_SURF_ATM_n(F, IM, S, U, W, TM, GDM, GRM, HPROGRAM, KI, KSW, PZENITH, &
+                             PSW_BANDS, PTSRAD, PDIR_ALB, PSCA_ALB, PEMIS, PTSURF )
 ENDIF
 !
 !-------------------------------------------------------------------------------
